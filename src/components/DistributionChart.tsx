@@ -25,6 +25,14 @@ function clampLabelX(x: number) {
   return Math.min(WIDTH - PAD_X - 24, Math.max(PAD_X + 24, x))
 }
 
+function markerLabelY(index: number, marker: number, min: number, max: number) {
+  const x = xScale(marker, min, max)
+  const isLeftEdge = x < PAD_X + 120
+  const isRightEdge = x > WIDTH - PAD_X - 120
+  if (isLeftEdge || isRightEdge) return TOP + 72 + index * 20
+  return TOP + 38 + index * 20
+}
+
 function pathFromPoints(points: ReadonlyArray<readonly [number, number]>) {
   return points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' ')
 }
@@ -70,6 +78,7 @@ export function DistributionChart({ definition, params, result }: DistributionCh
         <div className="chart-legend">
           <span className="legend-swatch" />
           <span>{result.label}</span>
+          {result.chartAnnotations?.barLabel ? <span className="chart-legend-detail">{result.chartAnnotations.barLabel}</span> : null}
         </div>
         <svg className="normal-chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={result.label}>
           <line x1={PAD_X} x2={WIDTH - PAD_X} y1={BASELINE} y2={BASELINE} className="chart-axis" />
@@ -88,8 +97,8 @@ export function DistributionChart({ definition, params, result }: DistributionCh
               </g>
             )
           })}
-          {result.chartAnnotations?.barLabel ? (
-            <text x={clampLabelX(labelX)} y={TOP + 12} textAnchor="middle" className="chart-annotation-label">
+          {result.chartAnnotations?.barLabel && activeValues.length <= 1 ? (
+            <text x={clampLabelX(labelX)} y={TOP + 20} textAnchor="middle" className="chart-annotation-label">
               {result.chartAnnotations.barLabel}
             </text>
           ) : null}
@@ -117,6 +126,7 @@ export function DistributionChart({ definition, params, result }: DistributionCh
       <div className="chart-legend">
         <span className="legend-swatch" />
         <span>{result.label}</span>
+        {result.chartAnnotations?.shadeLabel ? <span className="chart-legend-detail">{result.chartAnnotations.shadeLabel}</span> : null}
       </div>
       <svg className="normal-chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${result.label} 的阴影面积`}>
         <defs>
@@ -128,11 +138,6 @@ export function DistributionChart({ definition, params, result }: DistributionCh
         {result.shadeRanges.map(([from, to], index) => (
           <path key={`${from}-${to}-${index}`} d={continuousShade(definition, params, domainMin, domainMax, maxY, from, to)} fill={`url(#areaFill-${definition.id})`} />
         ))}
-        {result.chartAnnotations?.shadeLabel ? (
-          <text x={PAD_X + 8} y={TOP + 18} className="chart-annotation-label">
-            {result.chartAnnotations.shadeLabel}
-          </text>
-        ) : null}
         <path d={continuousPath(definition, params, domainMin, domainMax, maxY)} className="curve-line" />
         <line x1={PAD_X} x2={WIDTH - PAD_X} y1={BASELINE} y2={BASELINE} className="chart-axis" />
         {Array.from({ length: 9 }, (_, index) => domainMin + ((domainMax - domainMin) * index) / 8).map((tick) => (
@@ -147,7 +152,7 @@ export function DistributionChart({ definition, params, result }: DistributionCh
           <g key={`${marker}-${index}`}>
             <line x1={xScale(marker, domainMin, domainMax)} x2={xScale(marker, domainMin, domainMax)} y1={TOP} y2={BASELINE} className="marker-line" />
             <circle cx={xScale(marker, domainMin, domainMax)} cy={BASELINE} r="5.5" className="marker-dot" />
-            <text x={clampLabelX(xScale(marker, domainMin, domainMax))} y={TOP + 38 + index * 20} textAnchor="middle" className="marker-label">
+            <text x={clampLabelX(xScale(marker, domainMin, domainMax))} y={markerLabelY(index, marker, domainMin, domainMax)} textAnchor="middle" className="marker-label">
               {result.chartAnnotations?.markerLabels?.[index] ?? marker.toLocaleString('zh-CN', { maximumFractionDigits: 3 })}
             </text>
           </g>
