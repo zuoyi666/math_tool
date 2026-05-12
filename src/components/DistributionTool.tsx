@@ -166,8 +166,9 @@ export function DistributionTool({ definition }: DistributionToolProps) {
                 ))}
 
                 {queryControls.map((control) => (
-                  <div className="value-control range-value-control" key={`${control.key}-${control.value}`}>
+                  <div className="value-control range-value-control" key={control.key}>
                     <NumberControl
+                      key={`${control.key}-${control.value}`}
                       id={`${definition.id}-${control.key}`}
                       label={control.label}
                       value={control.value}
