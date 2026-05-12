@@ -511,6 +511,12 @@ button:disabled {
   stroke-width: 2;
 }
 
+.marker-label-box {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: rgba(253, 113, 20, 0.22);
+  stroke-width: 1;
+}
+
 .marker-label {
   fill: var(--accent);
   font-size: 15px;

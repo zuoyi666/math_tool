@@ -1,10 +1,10 @@
 import type { DistributionDefinition, ProbabilityResult } from '../types'
 
 const WIDTH = 920
-const HEIGHT = 340
+const HEIGHT = 360
 const PAD_X = 42
-const TOP = 28
-const BASELINE = 266
+const TOP = 64
+const BASELINE = 286
 const SAMPLE_COUNT = 220
 
 interface DistributionChartProps {
@@ -21,16 +21,48 @@ function yScale(value: number, maxY: number) {
   return BASELINE - (value / (maxY || 1)) * (BASELINE - TOP)
 }
 
-function clampLabelX(x: number) {
-  return Math.min(WIDTH - PAD_X - 24, Math.max(PAD_X + 24, x))
+function estimateTextWidth(text: string) {
+  return Array.from(text).reduce((width, char) => width + (char.charCodeAt(0) > 255 ? 14 : 8), 0)
 }
 
-function markerLabelY(index: number, marker: number, min: number, max: number) {
-  const x = xScale(marker, min, max)
-  const isLeftEdge = x < PAD_X + 120
-  const isRightEdge = x > WIDTH - PAD_X - 120
-  if (isLeftEdge || isRightEdge) return TOP + 72 + index * 20
-  return TOP + 38 + index * 20
+function markerLabelY(index: number) {
+  return 28 + (index % 2) * 24
+}
+
+function markerLabelPlacement(index: number, marker: number, min: number, max: number, label: string) {
+  const markerX = xScale(marker, min, max)
+  const labelWidth = Math.min(156, Math.max(56, estimateTextWidth(label) + 18))
+  const labelHeight = 24
+  const y = markerLabelY(index)
+  const placeRight = markerX < WIDTH / 2
+  let textAnchor: 'start' | 'end' = placeRight ? 'start' : 'end'
+  let textX = markerX + (placeRight ? 14 : -14)
+  let rectX = placeRight ? textX - 8 : textX - labelWidth + 8
+
+  if (rectX < PAD_X) {
+    textAnchor = 'start'
+    textX = markerX + 14
+    rectX = textX - 8
+  }
+
+  if (rectX + labelWidth > WIDTH - PAD_X) {
+    textAnchor = 'end'
+    textX = markerX - 14
+    rectX = textX - labelWidth + 8
+  }
+
+  rectX = Math.min(WIDTH - PAD_X - labelWidth, Math.max(PAD_X, rectX))
+  textX = textAnchor === 'start' ? rectX + 8 : rectX + labelWidth - 8
+
+  return {
+    rectX,
+    rectY: y - labelHeight + 6,
+    labelWidth,
+    labelHeight,
+    textAnchor,
+    textX,
+    y,
+  }
 }
 
 function pathFromPoints(points: ReadonlyArray<readonly [number, number]>) {
@@ -71,7 +103,6 @@ export function DistributionChart({ definition, params, result }: DistributionCh
     const maxY = Math.max(...heights, 0.01)
     const barWidth = Math.max(5, (WIDTH - PAD_X * 2) / values.length - 4)
     const activeValues = result.barRange ? values.filter((value) => value >= result.barRange![0] && value <= result.barRange![1]) : []
-    const labelX = activeValues.length ? xScale((activeValues[0] + activeValues[activeValues.length - 1]) / 2, min, max) : PAD_X
 
     return (
       <section className="chart-panel" aria-label={`${definition.title} 图表`}>
@@ -97,11 +128,6 @@ export function DistributionChart({ definition, params, result }: DistributionCh
               </g>
             )
           })}
-          {result.chartAnnotations?.barLabel && activeValues.length <= 1 ? (
-            <text x={clampLabelX(labelX)} y={TOP + 20} textAnchor="middle" className="chart-annotation-label">
-              {result.chartAnnotations.barLabel}
-            </text>
-          ) : null}
           {values.filter((value) => value === min || value === max || value % Math.max(1, Math.ceil(values.length / 8)) === 0).map((value) => (
             <text key={value} x={xScale(value, min, max)} y={BASELINE + 28} textAnchor="middle" className="chart-tick">
               {value}
@@ -148,15 +174,28 @@ export function DistributionChart({ definition, params, result }: DistributionCh
             </text>
           </g>
         ))}
-        {result.markers.map((marker, index) => (
-          <g key={`${marker}-${index}`}>
-            <line x1={xScale(marker, domainMin, domainMax)} x2={xScale(marker, domainMin, domainMax)} y1={TOP} y2={BASELINE} className="marker-line" />
-            <circle cx={xScale(marker, domainMin, domainMax)} cy={BASELINE} r="5.5" className="marker-dot" />
-            <text x={clampLabelX(xScale(marker, domainMin, domainMax))} y={markerLabelY(index, marker, domainMin, domainMax)} textAnchor="middle" className="marker-label">
-              {result.chartAnnotations?.markerLabels?.[index] ?? marker.toLocaleString('zh-CN', { maximumFractionDigits: 3 })}
-            </text>
-          </g>
-        ))}
+        {result.markers.map((marker, index) => {
+          const label = result.chartAnnotations?.markerLabels?.[index] ?? marker.toLocaleString('zh-CN', { maximumFractionDigits: 3 })
+          const placement = markerLabelPlacement(index, marker, domainMin, domainMax, label)
+
+          return (
+            <g key={`${marker}-${index}`}>
+              <line x1={xScale(marker, domainMin, domainMax)} x2={xScale(marker, domainMin, domainMax)} y1={TOP} y2={BASELINE} className="marker-line" />
+              <circle cx={xScale(marker, domainMin, domainMax)} cy={BASELINE} r="5.5" className="marker-dot" />
+              <rect
+                x={placement.rectX}
+                y={placement.rectY}
+                width={placement.labelWidth}
+                height={placement.labelHeight}
+                rx="5"
+                className="marker-label-box"
+              />
+              <text x={placement.textX} y={placement.y} textAnchor={placement.textAnchor} className="marker-label">
+                {label}
+              </text>
+            </g>
+          )
+        })}
         <text x={WIDTH - PAD_X} y={HEIGHT - 12} textAnchor="end" className="axis-label">
           {definition.variable}
         </text>

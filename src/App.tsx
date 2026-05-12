@@ -39,6 +39,10 @@ function App() {
 
   const tool = useMemo(() => getToolDefinition(activeTool), [activeTool])
 
+  useEffect(() => {
+    document.title = `Math Tool - ${tool.label}`
+  }, [tool.label])
+
   return (
     <AppShell activeTool={activeTool} tool={tool}>
       <Suspense fallback={<div className="tool-surface">正在加载工具...</div>}>{renderTool(activeTool)}</Suspense>
