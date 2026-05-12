@@ -349,6 +349,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'Z', meaning: '标准化后的随机变量，也就是 z 分数。' },
           { symbol: 'N(0,1)', meaning: '均值为 0、方差为 1 的正态分布。' },
         ],
+        example: {
+          question: '某考试成绩标准化后 z=1，表示它在标准正态表中的哪个位置？',
+          solution: '把 Z 看作标准化分数，z=1 表示该成绩比平均值高 1 个标准差。',
+        },
       },
       {
         latex: '\\phi(z)=\\frac{1}{\\sqrt{2\\pi}}e^{-z^2/2}',
@@ -358,6 +362,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'z', meaning: '横轴上的标准化取值。' },
           { symbol: 'e', meaning: '自然常数，约为 2.718。' },
         ],
+        example: {
+          question: '想比较 z=0 和 z=2 哪个位置曲线更高。',
+          solution: '代入密度函数可知 φ(0) 最大，φ(2) 更低；这说明靠近均值的位置更常见。',
+        },
       },
       {
         latex: '\\Phi(z)=P(Z\\le z)',
@@ -366,6 +374,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: '\\Phi(z)', meaning: '从负无穷到 z 的累计概率。' },
           { symbol: 'P(Z\\le z)', meaning: '事件 Z 小于或等于 z 的概率。' },
         ],
+        example: {
+          question: '求标准正态变量不超过 1.96 的概率。',
+          solution: '选择左尾并输入 z=1.96，可得到约 0.975 的累计概率。',
+        },
       },
     ],
     quickValues: CONTINUOUS_QUICK,
@@ -391,6 +403,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'T', meaning: '服从 t 分布的统计量。' },
           { symbol: '\\nu', meaning: '自由度，常见场景中等于样本量减 1。' },
         ],
+        example: {
+          question: '样本量 n=11 做单样本 t 检验，自由度是多少？',
+          solution: '单样本 t 检验常用 ν=n-1，所以自由度为 10。',
+        },
       },
       {
         latex: '\\nu \\in \\mathbb{N}^{+}',
@@ -398,6 +414,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
         terms: [
           { symbol: '\\mathbb{N}^{+}', meaning: '正整数集合，如 1、2、3。' },
         ],
+        example: {
+          question: 'ν=30 与 ν=3 的 t 分布哪个更接近标准正态？',
+          solution: 'ν=30 更接近标准正态；自由度越大，t 分布尾部越不厚。',
+        },
       },
       {
         latex: 'P(|T|\\ge t)=2\\left(1-F_t(|t|)\\right)',
@@ -406,6 +426,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: '|T|', meaning: 'T 的绝对值，用来同时考虑左右两端。' },
           { symbol: 'F_t', meaning: 't 分布的累计分布函数。' },
         ],
+        example: {
+          question: '双侧 t 检验中统计量 t=2.1，想求双尾 p 值。',
+          solution: '选择 t 分布“双尾”，输入 x=2.1 和自由度，工具会计算两端总面积。',
+        },
       },
     ],
     quickValues: CONTINUOUS_QUICK,
@@ -437,6 +461,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'X', meaning: '服从卡方分布的随机变量，只能取非负值。' },
           { symbol: 'k', meaning: '自由度，决定曲线形状。' },
         ],
+        example: {
+          question: '拟合优度检验有 5 个类别并估计 1 个参数，自由度大约是多少？',
+          solution: '常见做法是类别数减 1 再减估计参数数，即 k=5-1-1=3。',
+        },
       },
       {
         latex: 'k \\in \\mathbb{N}^{+}',
@@ -444,6 +472,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
         terms: [
           { symbol: '\\mathbb{N}^{+}', meaning: '正整数集合。' },
         ],
+        example: {
+          question: '卡方分布能否输入 x=-1？',
+          solution: '不能。卡方变量是平方和形式，取值范围从 0 开始。',
+        },
       },
       {
         latex: 'P(a\\le X\\le b)=F_{\\chi^2}(b)-F_{\\chi^2}(a)',
@@ -452,6 +484,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'a,b', meaning: '区间左右端点，计算时会自动按小到大处理。' },
           { symbol: 'F_{\\chi^2}', meaning: '卡方分布的累计分布函数。' },
         ],
+        example: {
+          question: '求 χ² 变量落在 2 到 8 之间的概率。',
+          solution: '选择“区间”，输入 a=2、b=8，工具会用右端累计概率减左端累计概率。',
+        },
       },
     ],
     quickValues: POSITIVE_QUICK,
@@ -486,6 +522,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'd_1', meaning: '分子自由度。' },
           { symbol: 'd_2', meaning: '分母自由度。' },
         ],
+        example: {
+          question: '比较两组方差时，分子样本自由度为 5，分母样本自由度为 10。',
+          solution: '在 F 分布中设置 d1=5、d2=10，再查询对应概率或临界值。',
+        },
       },
       {
         latex: 'd_1,d_2 \\in \\mathbb{N}^{+}',
@@ -493,6 +533,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
         terms: [
           { symbol: '\\mathbb{N}^{+}', meaning: '正整数集合。' },
         ],
+        example: {
+          question: 'F 分布参数写作 F(5,10)，哪个是分子自由度？',
+          solution: '第一个数 5 是 d1，也就是分子自由度；第二个数 10 是 d2。',
+        },
       },
       {
         latex: 'P(X\\ge x)=1-F_F(x)',
@@ -501,6 +545,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'F_F(x)', meaning: 'F 分布在 x 处的累计概率。' },
           { symbol: 'x', meaning: '横轴上的 F 统计量取值。' },
         ],
+        example: {
+          question: 'F 检验统计量为 2，想知道右尾概率。',
+          solution: '选择“右尾”，输入 x=2，并设置 d1、d2，结果就是 P(X≥2)。',
+        },
       },
     ],
     quickValues: [0.1, 0.5, 1, 1.5, 2, 3, 4, 5],
@@ -536,6 +584,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'p', meaning: '每次试验成功的概率。' },
           { symbol: 'X', meaning: '成功次数。' },
         ],
+        example: {
+          question: '投 10 次硬币，正面次数 X 应服从什么分布？',
+          solution: '若硬币公平，则 X~Bin(10,0.5)。',
+        },
       },
       {
         latex: 'P(X=k)=\\binom{n}{k}p^k(1-p)^{n-k}',
@@ -545,6 +597,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: '\\binom{n}{k}', meaning: '组合数，表示从 n 次试验中选出 k 次成功的方式数。' },
           { symbol: '1-p', meaning: '单次试验失败的概率。' },
         ],
+        example: {
+          question: '投 10 次公平硬币，恰好 5 次正面的概率是多少？',
+          solution: '选择二项分布点概率，设置 n=10、p=0.5、k=5。',
+        },
       },
       {
         latex: 'E(X)=np',
@@ -552,6 +608,11 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
         terms: [
           { symbol: 'E(X)', meaning: '随机变量 X 的期望或平均水平。' },
         ],
+        example: {
+          question: 'n=20、p=0.3 时，平均成功次数是多少？',
+          solution: 'E(X)=np=20×0.3=6。',
+          latex: 'E(X)=20\\times 0.3=6',
+        },
       },
     ],
     quickValues: DISCRETE_QUICK,
@@ -582,6 +643,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'X', meaning: '事件发生次数。' },
           { symbol: '\\lambda', meaning: '单位区间内的平均发生次数，也叫强度。' },
         ],
+        example: {
+          question: '某路口平均每分钟 3 辆车通过，1 分钟内车辆数可用什么分布？',
+          solution: '可用 X~Pois(3) 作为首个近似模型。',
+        },
       },
       {
         latex: 'P(X=k)=\\frac{e^{-\\lambda}\\lambda^k}{k!}',
@@ -591,6 +656,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'e', meaning: '自然常数，约为 2.718。' },
           { symbol: 'k!', meaning: 'k 的阶乘。' },
         ],
+        example: {
+          question: '平均每分钟 3 次事件，想求恰好发生 2 次的概率。',
+          solution: '选择泊松分布点概率，设置 λ=3、k=2。',
+        },
       },
       {
         latex: 'E(X)=\\operatorname{Var}(X)=\\lambda',
@@ -599,6 +668,10 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
           { symbol: 'E(X)', meaning: '平均发生次数。' },
           { symbol: '\\operatorname{Var}(X)', meaning: '发生次数的方差。' },
         ],
+        example: {
+          question: 'λ=4 的泊松分布，均值和方差分别是多少？',
+          solution: '均值和方差都等于 λ，所以都是 4。',
+        },
       },
     ],
     quickValues: DISCRETE_QUICK,

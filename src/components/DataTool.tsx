@@ -26,6 +26,16 @@ export function DataTool() {
         <input type="file" accept=".csv,text/csv" onChange={(event) => importFile(event.target.files?.[0])} aria-label="导入 CSV 文件" />
       </div>
 
+      <section className="workspace-card learning-example-panel">
+        <h2>例题：成绩与用时</h2>
+        <p>使用当前示例 CSV，观察 `score` 与 `time` 两列。先看均值和中位数判断总体水平，再看 Pearson r 判断分数和用时是否大致线性相关。</p>
+        <ol>
+          <li>确认 `score` 和 `time` 被识别为数值列。</li>
+          <li>比较 `score` 的均值、中位数和四分位数。</li>
+          <li>查看相关性卡片，判断用时越长是否可能对应分数越低。</li>
+        </ol>
+      </section>
+
       <div className="stats-strip">
         <div>
           <span>行数</span>

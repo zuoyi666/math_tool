@@ -59,6 +59,10 @@ function queryFormulaExplanation(definition: DistributionDefinition, mode: Query
         { symbol: `${cumulativeSymbol}^{-1}`, meaning: '分布的反函数，也叫分位数函数或临界值函数。' },
         { symbol: 'p', meaning: '输入的目标概率。' },
       ],
+      example:
+        mode === 'criticalLeft'
+          ? { question: '若左侧累计概率 p=0.95，求对应临界值。', solution: '在临界值模式输入 p=0.95，结果就是左侧 95% 面积对应的边界点。' }
+          : { question: '若右尾显著性水平 p=0.05，求拒绝域边界。', solution: '在右侧临界值模式输入 p=0.05，工具会用 1-p 反查临界点。' },
     }
   }
 
@@ -70,6 +74,7 @@ function queryFormulaExplanation(definition: DistributionDefinition, mode: Query
           { symbol: 'X', meaning: '当前离散分布的随机变量。' },
           { symbol: 'k', meaning: '输入的整数查询值。' },
         ],
+        example: { question: '想知道事件恰好发生 3 次的概率。', solution: '选择“点概率”，把 k 设为 3，主结果就是 P(X=3)。' },
       }
     }
     if (mode === 'right') {
@@ -79,6 +84,7 @@ function queryFormulaExplanation(definition: DistributionDefinition, mode: Query
           { symbol: 'F(k-1)', meaning: '小于 k 的累计概率。' },
           { symbol: '1-F(k-1)', meaning: '从 k 到右端所有柱形概率的总和。' },
         ],
+        example: { question: '想知道 X 至少为 5 的概率。', solution: '选择“右尾”，把 k 设为 5，工具会累加 5 及以上所有柱形。' },
       }
     }
     if (mode === 'between') {
@@ -88,6 +94,7 @@ function queryFormulaExplanation(definition: DistributionDefinition, mode: Query
           { symbol: 'a,b', meaning: '区间端点；如果输入顺序反了，会自动按小到大计算。' },
           { symbol: 'F', meaning: '离散分布的累计分布函数。' },
         ],
+        example: { question: '想知道 X 落在 2 到 6 之间的概率。', solution: '选择“区间”，输入 a=2、b=6，结果为这些整数点概率之和。' },
       }
     }
     return {
@@ -96,6 +103,7 @@ function queryFormulaExplanation(definition: DistributionDefinition, mode: Query
         { symbol: 'F(k)', meaning: '从最小可能值累加到 k 的概率。' },
         { symbol: 'k', meaning: '当前输入的整数查询值。' },
       ],
+      example: { question: '想知道 X 不超过 4 的概率。', solution: '选择“左尾”，把 k 设为 4，结果就是 0 到 4 的累计概率。' },
     }
   }
 
@@ -106,6 +114,7 @@ function queryFormulaExplanation(definition: DistributionDefinition, mode: Query
         { symbol: `${cumulativeSymbol}(x)`, meaning: '从左端到 x 的累计概率。' },
         { symbol: `1-${cumulativeSymbol}(x)`, meaning: 'x 右侧剩余面积。' },
       ],
+      example: { question: '想知道统计量大于 1.96 的概率。', solution: '选择“右尾”，把 x 设为 1.96，阴影面积就是右侧概率。' },
     }
   }
   if (mode === 'between') {
@@ -115,6 +124,7 @@ function queryFormulaExplanation(definition: DistributionDefinition, mode: Query
         { symbol: 'a,b', meaning: '区间端点；输入顺序反了也会自动按小到大计算。' },
         { symbol: `${cumulativeSymbol}(b)-${cumulativeSymbol}(a)`, meaning: '右端累计概率减去左端累计概率。' },
       ],
+      example: { question: '想知道变量落在 -1 到 1 之间的概率。', solution: '选择“区间”，输入 a=-1、b=1，结果就是两条竖线之间的面积。' },
     }
   }
   if (mode === 'twoTail') {
@@ -124,6 +134,7 @@ function queryFormulaExplanation(definition: DistributionDefinition, mode: Query
         { symbol: '|x|', meaning: 'x 的绝对值，用来同时定位左右两侧临界点。' },
         { symbol: cumulativeSymbol, meaning: `${definition.title} 的累计分布函数。` },
       ],
+      example: { question: '双侧检验中想看 |x|≥1.96 的概率。', solution: '选择“双尾”，输入 x=1.96，工具会同时计算左右两端面积。' },
     }
   }
   return {
@@ -132,6 +143,7 @@ function queryFormulaExplanation(definition: DistributionDefinition, mode: Query
       { symbol: `${cumulativeSymbol}(x)`, meaning: '当前分布的累计分布函数。' },
       { symbol: 'x', meaning: '当前输入的横轴查询值。' },
     ],
+    example: { question: '想知道变量不超过 0 的概率。', solution: '选择“左尾”，把 x 设为 0，曲线左侧阴影面积就是结果。' },
   }
 }
 
@@ -152,6 +164,14 @@ function FormulaItem({ title, formula }: { title: string; formula: FormulaExplan
             </div>
           ))}
         </dl>
+      ) : null}
+      {formula.example ? (
+        <div className="formula-example">
+          <strong>例题</strong>
+          <p>{formula.example.question}</p>
+          {formula.example.latex ? <MathFormula latex={formula.example.latex} className="formula-example-render" /> : null}
+          <p>{formula.example.solution}</p>
+        </div>
       ) : null}
     </li>
   )

@@ -44,6 +44,11 @@ export interface FormulaExplanation {
   latex: string
   description: string
   terms?: Array<{ symbol: string; meaning: string }>
+  example?: {
+    question: string
+    solution: string
+    latex?: string
+  }
 }
 
 export interface DistributionState {
@@ -144,6 +149,11 @@ export interface FormulaEntry {
   title: string
   latex: string
   description: string
+  example?: {
+    question: string
+    solution: string
+    latex?: string
+  }
 }
 
 export interface NumericColumnSummary {

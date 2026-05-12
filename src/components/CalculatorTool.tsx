@@ -9,6 +9,12 @@ const INITIAL_EXPRESSION = 'sqrt(2) + sin(pi / 6)'
 const EXAMPLES = ['sqrt(2)', 'sin(30)', 'log(100, 10)', 'x = 12', 'x^2 + 3x + 2']
 const HISTORY_KEY = 'math-tool:calculator-history'
 
+const CALCULATOR_EXAMPLES = [
+  { title: '角度模式', expression: 'sin(30)', note: '切到 DEG 后计算，结果应为 0.5；RAD 模式下结果不同。' },
+  { title: '变量赋值', expression: 'x = 12', note: '先计算赋值表达式，再输入 x^2 可复用变量。' },
+  { title: '常用对数', expression: 'log(100, 10)', note: '第二个参数 10 表示以 10 为底，结果为 2。' },
+]
+
 const SYMBOL_GROUPS: Array<{ id: CalculatorSymbolGroup; label: string }> = [
   { id: 'basic', label: '基础' },
   { id: 'functions', label: '函数' },
@@ -259,6 +265,19 @@ export function CalculatorTool() {
               </button>
             ))}
           </div>
+
+          <section className="learning-example-panel">
+            <h3>例题练习</h3>
+            <div className="learning-example-grid">
+              {CALCULATOR_EXAMPLES.map((item) => (
+                <button key={item.expression} type="button" onClick={() => setExpression(item.expression)}>
+                  <strong>{item.title}</strong>
+                  <code>{item.expression}</code>
+                  <span>{item.note}</span>
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
 
         <div className="workspace-card calculator-symbol-card">

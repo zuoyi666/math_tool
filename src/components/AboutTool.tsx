@@ -22,6 +22,15 @@ export function AboutTool() {
           </a>
         </p>
       </article>
+      <article className="workspace-card learning-example-panel">
+        <h2>例题学习路径</h2>
+        <p>建议从标准正态的左尾概率开始，再切换到 t 分布临界值，最后用数据工具验证一组 CSV 的描述统计。</p>
+        <ol>
+          <li>标准正态：求 P(Z ≤ 1.96)。</li>
+          <li>t 分布：设置自由度 ν=10，求右尾 p=0.05 的临界值。</li>
+          <li>数据工具：粘贴两列数值，观察均值、标准差和相关系数。</li>
+        </ol>
+      </article>
     </section>
   )
 }
