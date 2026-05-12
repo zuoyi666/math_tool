@@ -108,7 +108,7 @@ button:disabled {
 
 .tool-nav button,
 .tool-nav a,
-.theme-control,
+.repo-control,
 .text-action,
 .ghost-button,
 .icon-button,
@@ -148,7 +148,7 @@ button:disabled {
   opacity: 0.68;
 }
 
-.theme-control {
+.repo-control {
   display: flex;
   align-items: center;
   gap: 11px;
@@ -158,14 +158,11 @@ button:disabled {
   padding: 18px 10px 0;
   color: #334155;
   font-weight: 560;
+  text-decoration: none;
 }
 
-.sun-icon {
-  width: 22px;
-  height: 22px;
-  border: 2px solid #64748b;
-  border-radius: 999px;
-  box-shadow: 0 0 0 6px rgba(100, 116, 139, 0.08);
+.repo-control:hover {
+  color: var(--primary-strong);
 }
 
 .workspace {
@@ -1005,6 +1002,18 @@ button:disabled {
   font-weight: 720;
 }
 
+.external-link,
+.settings-link {
+  color: var(--primary-strong);
+  font-weight: 720;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.settings-link {
+  margin-left: 4px;
+}
+
 .formula-input,
 .csv-input,
 .toolbar-card input,
@@ -1497,7 +1506,7 @@ button:disabled {
     padding: 0 12px;
   }
 
-  .theme-control {
+  .repo-control {
     display: none;
   }
 

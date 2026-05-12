@@ -1,3 +1,5 @@
+import { GITHUB_REPO_LABEL, GITHUB_REPO_URL } from '../projectLinks'
+
 export function AboutTool() {
   return (
     <section className="tool-surface about-grid">
@@ -17,8 +19,8 @@ export function AboutTool() {
         <h2>版本控制</h2>
         <p>
           GitHub 仓库：
-          <a href="https://github.com/zuoyi666/math_tool" target="_blank" rel="noreferrer">
-            zuoyi666/math_tool
+          <a className="external-link" href={GITHUB_REPO_URL}>
+            {GITHUB_REPO_LABEL}
           </a>
         </p>
       </article>

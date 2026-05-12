@@ -1,6 +1,7 @@
-import { CircleHelp, Keyboard, Menu, Settings, Sigma } from 'lucide-react'
+import { CircleHelp, ExternalLink, Keyboard, Menu, Settings, Sigma } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import { GITHUB_REPO_LABEL, GITHUB_REPO_URL } from '../projectLinks'
 import { TOOL_REGISTRY } from '../toolRegistry'
 import type { ToolDefinition, ToolId } from '../types'
 
@@ -52,10 +53,10 @@ export function AppShell({ activeTool, tool, children }: AppShellProps) {
           })}
         </nav>
 
-        <button type="button" className="theme-control" aria-label="浅色模式">
-          <span className="sun-icon" />
-          浅色模式
-        </button>
+        <a className="repo-control" href={GITHUB_REPO_URL} aria-label="打开 GitHub 仓库">
+          <ExternalLink size={20} aria-hidden="true" />
+          GitHub 项目
+        </a>
       </aside>
 
       <main className="workspace">
@@ -126,16 +127,17 @@ export function AppShell({ activeTool, tool, children }: AppShellProps) {
             {activePanel === 'settings' ? (
               <div className="settings-list">
                 <div>
-                  <strong>主题</strong>
-                  <span>当前使用浅色工具界面。</span>
-                </div>
-                <div>
                   <strong>数据保存</strong>
                   <span>历史记录保存在当前浏览器本地存储中。</span>
                 </div>
                 <div>
                   <strong>版本控制</strong>
-                  <span>项目已连接 GitHub public 仓库 zuoyi666/math_tool。</span>
+                  <span>
+                    项目已连接 GitHub public 仓库：
+                    <a className="settings-link" href={GITHUB_REPO_URL}>
+                      {GITHUB_REPO_LABEL}
+                    </a>
+                  </span>
                 </div>
               </div>
             ) : null}
