@@ -414,6 +414,10 @@ button:disabled {
   font-size: 12px;
 }
 
+.preset-grid {
+  margin-bottom: 18px;
+}
+
 .quick-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -500,8 +504,20 @@ button:disabled {
 
 .marker-label {
   fill: var(--accent);
-  font-size: 19px;
+  font-size: 15px;
   font-weight: 740;
+}
+
+.chart-annotation-label,
+.bar-value-label {
+  fill: #0f766e;
+  font-size: 15px;
+  font-weight: 740;
+}
+
+.bar-value-label {
+  fill: #92400e;
+  font-size: 13px;
 }
 
 .chart-tick,
@@ -536,6 +552,17 @@ button:disabled {
 .panel-heading {
   border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
+}
+
+.result-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.result-heading span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 680;
 }
 
 .panel-heading h2,
@@ -634,6 +661,13 @@ button:disabled {
 .history-panel {
   background: var(--surface);
   padding: 18px 26px 26px;
+}
+
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  justify-content: flex-end;
 }
 
 .ghost-button {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RotateCcw, Trash2 } from 'lucide-react'
-import { calculateDistribution, normalizeDistributionState, QUERY_MODE_LABELS } from '../distributions'
+import { BookmarkPlus, RotateCcw, Trash2 } from 'lucide-react'
+import { applyDistributionQuickValue, calculateDistribution, normalizeDistributionState, QUERY_MODE_LABELS } from '../distributions'
 import type { DistributionDefinition, DistributionState, HistoryEntry, QueryMode } from '../types'
 import { DistributionChart } from './DistributionChart'
 
@@ -23,7 +23,7 @@ function storageKey(id: string) {
 
 function readHistory(id: string): Array<HistoryEntry<DistributionState>> {
   try {
-    return JSON.parse(window.localStorage.getItem(storageKey(id)) ?? '[]') as Array<HistoryEntry<DistributionState>>
+    return (JSON.parse(window.localStorage.getItem(storageKey(id)) ?? '[]') as Array<HistoryEntry<DistributionState>>).slice(0, 12)
   } catch {
     return []
   }
@@ -40,6 +40,51 @@ function parseValue(value: string, fallback: number, min: number, max: number, i
   return integer ? Math.round(bounded) : Math.round(bounded * 1000) / 1000
 }
 
+interface NumberControlProps {
+  id: string
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  integer?: boolean
+  description?: string
+  onCommit: (value: number) => void
+}
+
+function NumberControl({ id, label, value, min, max, step, integer = false, description, onCommit }: NumberControlProps) {
+  const [draft, setDraft] = useState(formatInput(value))
+
+  const commit = () => {
+    const parsed = parseValue(draft, value, min, max, integer)
+    onCommit(parsed)
+    setDraft(formatInput(parsed))
+  }
+
+  return (
+    <div className="value-control">
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.currentTarget.blur()
+          }
+        }}
+        aria-label={`${label} 输入`}
+      />
+      {description ? <small>{description}</small> : null}
+    </div>
+  )
+}
+
 export function DistributionTool({ definition }: DistributionToolProps) {
   const [state, setState] = useState<DistributionState>(() => normalizeDistributionState(definition, definition.defaultState))
   const [history, setHistory] = useState<Array<HistoryEntry<DistributionState>>>(() => readHistory(definition.id))
@@ -50,28 +95,25 @@ export function DistributionTool({ definition }: DistributionToolProps) {
     window.localStorage.setItem(storageKey(definition.id), JSON.stringify(history))
   }, [definition.id, history])
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const entry: HistoryEntry<DistributionState> = {
-        id: `${Date.now()}-${result.label}`,
-        createdAt: new Date().toLocaleString('zh-CN', { hour12: false }),
-        state: normalizedState,
-        label: result.label,
-        value: result.primaryValue,
-      }
-      setHistory((current) => {
-        const latest = current[0]
-        if (latest?.label === entry.label && latest.value === entry.value) return current
-        return [entry, ...current].slice(0, 6)
-      })
-    }, 650)
-
-    return () => window.clearTimeout(timer)
-  }, [normalizedState, result.label, result.primaryValue])
-
   const setMode = (mode: QueryMode) => setState((current) => ({ ...current, mode }))
   const setQueryValue = (key: 'x' | 'a' | 'b' | 'p', value: number) => setState((current) => ({ ...current, [key]: value }))
   const setParam = (key: string, value: number) => setState((current) => ({ ...current, params: { ...current.params, [key]: value } }))
+  const applyPreset = (params: Record<string, number>) => setState((current) => normalizeDistributionState(definition, { ...current, params: { ...current.params, ...params } }))
+  const saveCurrentResult = () => {
+    const entry: HistoryEntry<DistributionState> = {
+      id: `${Date.now()}-${result.label}`,
+      createdAt: new Date().toLocaleString('zh-CN', { hour12: false }),
+      state: normalizedState,
+      label: result.label,
+      value: `${result.primaryLabel}: ${result.primaryValue}`,
+      parameterSummary: result.parameterSummary,
+    }
+    setHistory((current) => {
+      const latest = current[0]
+      if (latest?.label === entry.label && latest.value === entry.value && latest.parameterSummary === entry.parameterSummary) return current
+      return [entry, ...current].slice(0, 12)
+    })
+  }
   const [domainMin, domainMax] = definition.domain(normalizedState.params)
   const integerQuery = definition.kind === 'discrete'
   const queryMin = integerQuery ? Math.ceil(domainMin) : domainMin
@@ -109,36 +151,31 @@ export function DistributionTool({ definition }: DistributionToolProps) {
             <div className="control-grid">
               <div className="control-stack">
                 {definition.parameterDefinitions.map((item) => (
-                  <div className="value-control" key={item.key}>
-                    <label htmlFor={`${definition.id}-${item.key}`}>{item.label}</label>
-                    <input
-                      id={`${definition.id}-${item.key}`}
-                      type="number"
-                      min={item.min}
-                      max={item.max}
-                      step={item.step}
-                      value={formatInput(normalizedState.params[item.key])}
-                      onChange={(event) => setParam(item.key, parseValue(event.target.value, normalizedState.params[item.key], item.min, item.max, item.integer))}
-                      aria-label={`${item.label} 输入`}
-                    />
-                    <small>{item.description}</small>
-                  </div>
+                  <NumberControl
+                    key={`${item.key}-${normalizedState.params[item.key]}`}
+                    id={`${definition.id}-${item.key}`}
+                    label={item.label}
+                    value={normalizedState.params[item.key]}
+                    min={item.min}
+                    max={item.max}
+                    step={item.step}
+                    integer={item.integer}
+                    description={item.description}
+                    onCommit={(value) => setParam(item.key, value)}
+                  />
                 ))}
 
                 {queryControls.map((control) => (
-                  <div className="value-control" key={control.key}>
-                    <label htmlFor={`${definition.id}-${control.key}`}>{control.label}</label>
-                    <input
+                  <div className="value-control range-value-control" key={`${control.key}-${control.value}`}>
+                    <NumberControl
                       id={`${definition.id}-${control.key}`}
-                      type="number"
+                      label={control.label}
+                      value={control.value}
                       min={control.min ?? queryMin}
                       max={control.max ?? queryMax}
                       step={control.step ?? (integerQuery ? 1 : 0.01)}
-                      value={formatInput(control.value)}
-                      onChange={(event) =>
-                        setQueryValue(control.key, parseValue(event.target.value, control.value, control.min ?? queryMin, control.max ?? queryMax, integerQuery && control.key !== 'p'))
-                      }
-                      aria-label={`${control.label} 输入`}
+                      integer={integerQuery && control.key !== 'p'}
+                      onCommit={(value) => setQueryValue(control.key, value)}
                     />
                     <input
                       className="range-control"
@@ -155,19 +192,32 @@ export function DistributionTool({ definition }: DistributionToolProps) {
               </div>
 
               <div className="quick-panel">
+                {definition.parameterPresets?.length ? (
+                  <>
+                    <div className="quick-header">
+                      <span>参数预设</span>
+                      <small>改变分布参数</small>
+                    </div>
+                    <div className="quick-grid preset-grid">
+                      {definition.parameterPresets.map((preset) => (
+                        <button key={preset.label} type="button" onClick={() => applyPreset(preset.params)}>
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
                 <div className="quick-header">
-                  <span>快速选择</span>
-                  <small>常用参数</small>
+                  <span>常用 {integerQuery ? 'k' : 'x'} 值</span>
+                  <small>只改变查询值</small>
                 </div>
                 <div className="quick-grid">
                   {definition.quickValues.map((value) => (
                     <button
                       key={value}
                       type="button"
-                      onClick={() => {
-                        if (normalizedState.mode === 'between') setState((current) => ({ ...current, a: definition.kind === 'discrete' ? Math.max(0, Math.round(value - 1)) : -Math.abs(value), b: Math.abs(value) }))
-                        else setState((current) => ({ ...current, x: value }))
-                      }}
+                      className={normalizedState.mode !== 'between' && normalizedState.x === value ? 'selected' : ''}
+                      onClick={() => setState((current) => applyDistributionQuickValue(definition, current, value))}
                     >
                       {value}
                     </button>
@@ -181,15 +231,18 @@ export function DistributionTool({ definition }: DistributionToolProps) {
         </div>
 
         <aside className="result-panel">
-          <div className="panel-heading">
-            <h2>计算结果</h2>
+          <div className="panel-heading result-heading">
+            <div>
+              <h2>{result.queryType === 'critical' ? '临界值查询' : '概率查询'}</h2>
+              <span>{result.primaryLabel}</span>
+            </div>
             <strong>{result.primaryValue}</strong>
           </div>
           <dl className="result-list">
             {result.detailRows.map((row) => (
               <div key={row.label}>
                 <dt>{row.label}</dt>
-                <dd className={row.label === '概率' ? 'accent' : ''}>{row.value}</dd>
+                <dd className={row.label === result.primaryLabel ? 'accent' : ''}>{row.value}</dd>
               </div>
             ))}
           </dl>
@@ -212,10 +265,16 @@ export function DistributionTool({ definition }: DistributionToolProps) {
       <section className="history-panel">
         <div className="history-header">
           <h2>历史记录</h2>
-          <button type="button" className="ghost-button danger" onClick={() => setHistory([])} disabled={history.length === 0}>
-            <Trash2 size={15} />
-            清空记录
-          </button>
+          <div className="history-actions">
+            <button type="button" className="ghost-button" onClick={saveCurrentResult}>
+              <BookmarkPlus size={15} />
+              保存本次结果
+            </button>
+            <button type="button" className="ghost-button danger" onClick={() => setHistory([])} disabled={history.length === 0}>
+              <Trash2 size={15} />
+              清空记录
+            </button>
+          </div>
         </div>
         <div className="history-table-wrap">
           <table className="history-table">
@@ -223,6 +282,7 @@ export function DistributionTool({ definition }: DistributionToolProps) {
               <tr>
                 <th>时间</th>
                 <th>模式</th>
+                <th>参数</th>
                 <th>结果</th>
                 <th>操作</th>
               </tr>
@@ -232,6 +292,7 @@ export function DistributionTool({ definition }: DistributionToolProps) {
                 <tr key={entry.id}>
                   <td>{entry.createdAt}</td>
                   <td>{entry.label}</td>
+                  <td>{entry.parameterSummary ?? calculateDistribution(definition, entry.state).parameterSummary}</td>
                   <td>{entry.value}</td>
                   <td>
                     <button type="button" className="icon-button" onClick={() => setState(entry.state)} aria-label="恢复这条记录">
@@ -242,8 +303,8 @@ export function DistributionTool({ definition }: DistributionToolProps) {
               ))}
               {history.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="empty-history">
-                    调整参数后会自动记录最近 6 次计算。
+                  <td colSpan={5} className="empty-history">
+                    点击“保存本次结果”后会记录最近 12 次计算。
                   </td>
                 </tr>
               ) : null}

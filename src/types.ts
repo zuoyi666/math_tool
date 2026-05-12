@@ -35,6 +35,11 @@ export interface ParameterDefinition {
   integer?: boolean
 }
 
+export interface ParameterPreset {
+  label: string
+  params: Record<string, number>
+}
+
 export interface DistributionState {
   mode: QueryMode
   params: Record<string, number>
@@ -56,16 +61,27 @@ export interface DistributionDefinition {
   domain: (params: Record<string, number>) => [number, number]
   formulas: string[]
   quickValues: number[]
+  parameterPresets?: ParameterPreset[]
   pdf?: (x: number, params: Record<string, number>) => number
   pmf?: (k: number, params: Record<string, number>) => number
   cdf: (x: number, params: Record<string, number>) => number
   quantile?: (p: number, params: Record<string, number>) => number
 }
 
+export type DistributionQueryType = 'probability' | 'critical'
+
+export interface ChartAnnotations {
+  shadeLabel?: string
+  markerLabels?: string[]
+  barLabel?: string
+}
+
 export interface ProbabilityResult {
+  queryType: DistributionQueryType
   probability: number
   percent: number
   label: string
+  primaryLabel: string
   primaryValue: string
   parameterSummary: string
   interpretation: string
@@ -73,6 +89,7 @@ export interface ProbabilityResult {
   detailRows: Array<{ label: string; value: string }>
   markers: number[]
   shadeRanges: Array<[number, number]>
+  chartAnnotations?: ChartAnnotations
   barRange?: [number, number]
 }
 
@@ -82,6 +99,7 @@ export interface HistoryEntry<TState> {
   state: TState
   label: string
   value: string
+  parameterSummary?: string
 }
 
 export type AngleMode = 'rad' | 'deg'

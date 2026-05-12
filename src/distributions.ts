@@ -48,6 +48,34 @@ function parameterSummary(definition: DistributionDefinition, params: Record<str
   return definition.parameterDefinitions.map((item) => `${item.label} = ${formatCompact(param(definition.parameterDefinitions, params, item.key))}`).join(', ')
 }
 
+function joinSummary(...parts: string[]) {
+  return parts.filter(Boolean).join('; ')
+}
+
+function paramsOrDefault(paramsText: string) {
+  return paramsText || '标准参数'
+}
+
+function probabilityInterpretation(definition: DistributionDefinition, label: string, probability: number, mode: QueryMode) {
+  const percent = formatNumber(probability * 100, 2)
+  const context =
+    mode === 'left'
+      ? '左尾表示不超过该取值的累计概率，常用于查累计分布表。'
+      : mode === 'right'
+        ? '右尾表示达到或超过该取值的概率，常用于显著性检验的拒绝域。'
+        : mode === 'between'
+          ? '区间概率表示落在两个端点之间的面积或柱形总和。'
+          : mode === 'twoTail'
+            ? '双尾概率常用于双侧检验，表示两端同等极端区域的总概率。'
+            : '点概率表示离散变量恰好等于该值的概率。'
+  return `${definition.title} 下，${label} 的概率约为 ${percent}%。${context}`
+}
+
+function criticalInterpretation(definition: DistributionDefinition, label: string, critical: number, probability: number, mode: QueryMode) {
+  const direction = mode === 'criticalRight' ? '右尾面积' : '左尾累计概率'
+  return `${definition.title} 下，当${direction}为 ${formatCompact(probability)} 时，临界值约为 ${formatCompact(critical)}。考试或检验中可把它作为拒绝域边界：观测值越过该边界时进入对应尾部区域。${label}`
+}
+
 function safeCdf(definition: DistributionDefinition, x: number, params: Record<string, number>) {
   const [min, max] = definition.domain(params)
   if (x < min) return 0
@@ -77,6 +105,17 @@ export function normalizeDistributionState(definition: DistributionDefinition, s
     b: definition.kind === 'discrete' ? Math.round(clamp(state.b, domainMin, domainMax)) : clamp(state.b, domainMin, domainMax),
     p: clamp(state.p, 0.001, 0.999),
   }
+}
+
+export function applyDistributionQuickValue(definition: DistributionDefinition, state: DistributionState, value: number): DistributionState {
+  if (state.mode === 'between') {
+    return {
+      ...state,
+      a: definition.kind === 'discrete' ? Math.max(0, Math.round(value - 1)) : -Math.abs(value),
+      b: definition.kind === 'discrete' ? Math.round(value) : Math.abs(value),
+    }
+  }
+  return { ...state, x: value }
 }
 
 export function calculateDistribution(definition: DistributionDefinition, state: DistributionState): ProbabilityResult {
@@ -122,22 +161,27 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     }
 
     return {
+      queryType: 'probability',
       probability,
       percent: probability * 100,
       label,
+      primaryLabel: '概率',
       primaryValue: formatNumber(probability, 6),
-      parameterSummary: mode === 'between' ? `${paramsText}; a = ${a}, b = ${b}` : `${paramsText}; k = ${x}`,
-      interpretation: `${definition.title} 下，${label} 的概率约为 ${formatNumber(probability * 100, 2)}%。`,
+      parameterSummary: joinSummary(paramsText, mode === 'between' ? `a = ${a}, b = ${b}` : `k = ${x}`),
+      interpretation: probabilityInterpretation(definition, label, probability, mode),
       formula,
       detailRows: [
         { label: '概率', value: formatNumber(probability, 6) },
         { label: '百分比', value: `${formatNumber(probability * 100, 2)}%` },
         { label: 'CDF(k)', value: formatNumber(safeCdf(definition, x, params), 6) },
         { label: 'PMF(k)', value: formatNumber(pmf(x, params), 6) },
-        { label: '参数', value: paramsText },
+        { label: '参数', value: paramsOrDefault(paramsText) },
       ],
       markers,
       shadeRanges: [],
+      chartAnnotations: {
+        barLabel: `${label}, P=${formatNumber(probability, 4)}`,
+      },
       barRange,
     }
   }
@@ -150,15 +194,21 @@ export function calculateDistribution(definition: DistributionDefinition, state:
   let probability = cdfX
   let label = `P(${variable} ≤ ${formatCompact(x)})`
   let formula = 'CDF(x)'
+  let queryType: ProbabilityResult['queryType'] = 'probability'
+  let primaryLabel = '概率'
+  let primaryValue = formatNumber(probability, 6)
   let markers = [x]
   let shadeRanges: Array<[number, number]> = [[domainMin, x]]
   let xSummary = `x = ${formatCompact(x)}`
+  let detailRows: ProbabilityResult['detailRows'] | undefined
+  let interpretation = probabilityInterpretation(definition, label, probability, mode)
 
   if (mode === 'right') {
     probability = 1 - cdfX
     label = `P(${variable} ≥ ${formatCompact(x)})`
     formula = '1 - CDF(x)'
     shadeRanges = [[x, domainMax]]
+    interpretation = probabilityInterpretation(definition, label, probability, mode)
   } else if (mode === 'between') {
     probability = safeCdf(definition, b, params) - safeCdf(definition, a, params)
     label = `P(${formatCompact(a)} ≤ ${variable} ≤ ${formatCompact(b)})`
@@ -166,6 +216,7 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     markers = [a, b]
     shadeRanges = [[a, b]]
     xSummary = `a = ${formatCompact(a)}, b = ${formatCompact(b)}`
+    interpretation = probabilityInterpretation(definition, label, probability, mode)
   } else if (mode === 'twoTail') {
     const absX = Math.abs(x)
     probability = 2 * (1 - safeCdf(definition, absX, params))
@@ -177,43 +228,82 @@ export function calculateDistribution(definition: DistributionDefinition, state:
       [absX, domainMax],
     ]
     xSummary = `|x| = ${formatCompact(absX)}`
+    interpretation = probabilityInterpretation(definition, label, probability, mode)
   } else if (mode === 'criticalLeft' && definition.quantile) {
     const critical = definition.quantile(normalized.p, params)
     probability = normalized.p
     label = `CDF⁻¹(${formatCompact(normalized.p)}) = ${formatCompact(critical)}`
     formula = 'Quantile(p)'
+    queryType = 'critical'
+    primaryLabel = '临界值'
+    primaryValue = formatCompact(critical)
     markers = [critical]
     shadeRanges = [[domainMin, critical]]
-    xSummary = `p = ${formatCompact(normalized.p)}`
+    xSummary = `左尾 p = ${formatCompact(normalized.p)}, 临界值 = ${formatCompact(critical)}`
+    interpretation = criticalInterpretation(definition, label, critical, probability, mode)
+    detailRows = [
+      { label: '临界值', value: formatCompact(critical) },
+      { label: '输入概率', value: formatCompact(normalized.p) },
+      { label: '尾部方向', value: '左尾累计' },
+      { label: 'CDF(临界值)', value: formatNumber(safeCdf(definition, critical, params), 6) },
+      { label: 'PDF(临界值)', value: formatNumber(definition.pdf?.(critical, params) ?? 0, 6) },
+      { label: '参数', value: paramsOrDefault(paramsText) },
+    ]
   } else if (mode === 'criticalRight' && definition.quantile) {
     const critical = definition.quantile(1 - normalized.p, params)
     probability = normalized.p
     label = `P(${variable} ≥ ${formatCompact(critical)}) = ${formatCompact(normalized.p)}`
     formula = 'Quantile(1 - p)'
+    queryType = 'critical'
+    primaryLabel = '临界值'
+    primaryValue = formatCompact(critical)
     markers = [critical]
     shadeRanges = [[critical, domainMax]]
-    xSummary = `右尾 p = ${formatCompact(normalized.p)}`
+    xSummary = `右尾 p = ${formatCompact(normalized.p)}, 临界值 = ${formatCompact(critical)}`
+    interpretation = criticalInterpretation(definition, label, critical, probability, mode)
+    detailRows = [
+      { label: '临界值', value: formatCompact(critical) },
+      { label: '输入概率', value: formatCompact(normalized.p) },
+      { label: '尾部方向', value: '右尾面积' },
+      { label: 'CDF(临界值)', value: formatNumber(safeCdf(definition, critical, params), 6) },
+      { label: 'PDF(临界值)', value: formatNumber(definition.pdf?.(critical, params) ?? 0, 6) },
+      { label: '参数', value: paramsOrDefault(paramsText) },
+    ]
   }
 
   probability = clamp(probability, 0, 1)
-
-  return {
-    probability,
-    percent: probability * 100,
-    label,
-    primaryValue: formatNumber(probability, 6),
-    parameterSummary: `${paramsText}; ${xSummary}`,
-    interpretation: `${definition.title} 下，${label} 的概率约为 ${formatNumber(probability * 100, 2)}%。`,
-    formula,
-    detailRows: [
+  if (queryType === 'probability') {
+    primaryValue = formatNumber(probability, 6)
+    detailRows = [
       { label: '概率', value: formatNumber(probability, 6) },
       { label: '百分比', value: `${formatNumber(probability * 100, 2)}%` },
       { label: 'CDF(x)', value: formatNumber(cdfX, 6) },
       { label: 'PDF(x)', value: formatNumber(density, 6) },
-      { label: '参数', value: paramsText },
-    ],
+      { label: '参数', value: paramsOrDefault(paramsText) },
+    ]
+  }
+  const finalDetailRows = detailRows ?? [
+    { label: primaryLabel, value: primaryValue },
+    { label: '参数', value: paramsOrDefault(paramsText) },
+  ]
+
+  return {
+    queryType,
+    probability,
+    percent: probability * 100,
+    label,
+    primaryLabel,
+    primaryValue,
+    parameterSummary: joinSummary(paramsText, xSummary),
+    interpretation,
+    formula,
+    detailRows: finalDetailRows,
     markers,
     shadeRanges,
+    chartAnnotations: {
+      shadeLabel: `阴影面积 = ${formatNumber(probability, 4)}`,
+      markerLabels: markers.map((marker) => (queryType === 'critical' ? `临界值 ${formatCompact(marker)}` : `${variable} = ${formatCompact(marker)}`)),
+    },
   }
 }
 
@@ -246,6 +336,12 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     domain: () => [-6, 6],
     formulas: ['T ~ t(ν)', 'ν 为自由度', '双尾常用于 t 检验临界值'],
     quickValues: CONTINUOUS_QUICK,
+    parameterPresets: [
+      { label: 'ν=1', params: { df: 1 } },
+      { label: 'ν=5', params: { df: 5 } },
+      { label: 'ν=10', params: { df: 10 } },
+      { label: 'ν=30', params: { df: 30 } },
+    ],
     pdf: (x, p) => jStat.studentt.pdf(x, p.df),
     cdf: (x, p) => jStat.studentt.cdf(x, p.df),
     quantile: (pValue, p) => jStat.studentt.inv(pValue, p.df),
@@ -262,6 +358,12 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     domain: (p) => [0, Math.max(12, p.df + 5 * Math.sqrt(2 * p.df))],
     formulas: ['X ~ χ²(k)', 'k 为自由度', '常用于方差和拟合优度检验'],
     quickValues: POSITIVE_QUICK,
+    parameterPresets: [
+      { label: 'k=1', params: { df: 1 } },
+      { label: 'k=5', params: { df: 5 } },
+      { label: 'k=10', params: { df: 10 } },
+      { label: 'k=30', params: { df: 30 } },
+    ],
     pdf: (x, p) => jStat.chisquare.pdf(x, p.df),
     cdf: (x, p) => jStat.chisquare.cdf(x, p.df),
     quantile: (pValue, p) => jStat.chisquare.inv(pValue, p.df),
@@ -281,6 +383,12 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     domain: () => [0, 6],
     formulas: ['F ~ F(d1,d2)', '常用于方差比和 ANOVA', '右尾概率是 F 检验的常见形式'],
     quickValues: [0.1, 0.5, 1, 1.5, 2, 3, 4, 5],
+    parameterPresets: [
+      { label: '5 / 10', params: { df1: 5, df2: 10 } },
+      { label: '10 / 10', params: { df1: 10, df2: 10 } },
+      { label: '5 / 20', params: { df1: 5, df2: 20 } },
+      { label: '20 / 20', params: { df1: 20, df2: 20 } },
+    ],
     pdf: (x, p) => jStat.centralF.pdf(x, p.df1, p.df2),
     cdf: (x, p) => jStat.centralF.cdf(x, p.df1, p.df2),
     quantile: (pValue, p) => jStat.centralF.inv(pValue, p.df1, p.df2),
@@ -300,6 +408,12 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     domain: (p) => [0, p.n],
     formulas: ['X ~ Bin(n,p)', 'P(X=k)=C(n,k)p^k(1-p)^(n-k)', 'E(X)=np'],
     quickValues: DISCRETE_QUICK,
+    parameterPresets: [
+      { label: 'n=10, p=.5', params: { n: 10, p: 0.5 } },
+      { label: 'n=20, p=.5', params: { n: 20, p: 0.5 } },
+      { label: 'n=20, p=.2', params: { n: 20, p: 0.2 } },
+      { label: 'n=50, p=.1', params: { n: 50, p: 0.1 } },
+    ],
     pmf: (k, p) => jStat.binomial.pdf(Math.round(k), p.n, p.p),
     cdf: (k, p) => jStat.binomial.cdf(Math.floor(k), p.n, p.p),
   },
@@ -315,6 +429,12 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     domain: (p) => [0, Math.ceil(Math.max(12, p.lambda + 5 * Math.sqrt(p.lambda)))],
     formulas: ['X ~ Pois(λ)', 'P(X=k)=e^(-λ)λ^k/k!', 'E(X)=Var(X)=λ'],
     quickValues: DISCRETE_QUICK,
+    parameterPresets: [
+      { label: 'λ=1', params: { lambda: 1 } },
+      { label: 'λ=3', params: { lambda: 3 } },
+      { label: 'λ=5', params: { lambda: 5 } },
+      { label: 'λ=10', params: { lambda: 10 } },
+    ],
     pmf: (k, p) => jStat.poisson.pdf(Math.round(k), p.lambda),
     cdf: (k, p) => jStat.poisson.cdf(Math.floor(k), p.lambda),
   },

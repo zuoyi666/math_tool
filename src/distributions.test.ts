@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculateDistribution, DISTRIBUTIONS } from './distributions'
+import { applyDistributionQuickValue, calculateDistribution, DISTRIBUTIONS } from './distributions'
 
 describe('distribution engine', () => {
   it('calculates Student t left tail', () => {
@@ -73,5 +73,65 @@ describe('distribution engine', () => {
     })
     expect(result.probability).toBeCloseTo(0.68269, 4)
     expect(result.parameterSummary).toContain('a = -1.00, b = 1.00')
+  })
+
+  it('shows normal left critical value as the primary result', () => {
+    const result = calculateDistribution(DISTRIBUTIONS.normal, {
+      mode: 'criticalLeft',
+      params: {},
+      x: 0,
+      a: -1,
+      b: 1,
+      p: 0.975,
+    })
+
+    expect(result.queryType).toBe('critical')
+    expect(result.primaryLabel).toBe('临界值')
+    expect(Number(result.primaryValue)).toBeCloseTo(1.96, 2)
+  })
+
+  it('shows normal right critical value as the primary result', () => {
+    const result = calculateDistribution(DISTRIBUTIONS.normal, {
+      mode: 'criticalRight',
+      params: {},
+      x: 0,
+      a: -1,
+      b: 1,
+      p: 0.025,
+    })
+
+    expect(result.queryType).toBe('critical')
+    expect(result.primaryLabel).toBe('临界值')
+    expect(Number(result.primaryValue)).toBeCloseTo(1.96, 2)
+  })
+
+  it('shows continuous critical values instead of probabilities', () => {
+    for (const distribution of [DISTRIBUTIONS.studentT, DISTRIBUTIONS.chiSquare, DISTRIBUTIONS.f]) {
+      const result = calculateDistribution(distribution, {
+        ...distribution.defaultState,
+        mode: 'criticalRight',
+        p: 0.05,
+      })
+
+      expect(result.queryType).toBe('critical')
+      expect(result.primaryLabel).toBe('临界值')
+      expect(result.detailRows[0].label).toBe('临界值')
+      expect(result.primaryValue).not.toBe('0.050000')
+    }
+  })
+
+  it('quick values only change query fields and preserve distribution parameters', () => {
+    const state = {
+      mode: 'exact' as const,
+      params: { n: 20, p: 0.2 },
+      x: 3,
+      a: 1,
+      b: 5,
+      p: 0.95,
+    }
+    const next = applyDistributionQuickValue(DISTRIBUTIONS.binomial, state, 8)
+
+    expect(next.x).toBe(8)
+    expect(next.params).toEqual({ n: 20, p: 0.2 })
   })
 })

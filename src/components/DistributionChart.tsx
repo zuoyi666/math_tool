@@ -21,6 +21,10 @@ function yScale(value: number, maxY: number) {
   return BASELINE - (value / (maxY || 1)) * (BASELINE - TOP)
 }
 
+function clampLabelX(x: number) {
+  return Math.min(WIDTH - PAD_X - 24, Math.max(PAD_X + 24, x))
+}
+
 function pathFromPoints(points: ReadonlyArray<readonly [number, number]>) {
   return points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' ')
 }
@@ -58,6 +62,8 @@ export function DistributionChart({ definition, params, result }: DistributionCh
     const heights = values.map((value) => definition.pmf?.(value, params) ?? 0)
     const maxY = Math.max(...heights, 0.01)
     const barWidth = Math.max(5, (WIDTH - PAD_X * 2) / values.length - 4)
+    const activeValues = result.barRange ? values.filter((value) => value >= result.barRange![0] && value <= result.barRange![1]) : []
+    const labelX = activeValues.length ? xScale((activeValues[0] + activeValues[activeValues.length - 1]) / 2, min, max) : PAD_X
 
     return (
       <section className="chart-panel" aria-label={`${definition.title} 图表`}>
@@ -71,13 +77,30 @@ export function DistributionChart({ definition, params, result }: DistributionCh
             const active = result.barRange ? value >= result.barRange[0] && value <= result.barRange[1] : false
             const h = BASELINE - yScale(definition.pmf?.(value, params) ?? 0, maxY)
             const x = xScale(value, min, max) - barWidth / 2
-            return <rect key={value} x={x} y={BASELINE - h} width={barWidth} height={h} rx="4" className={active ? 'bar active' : 'bar'} />
+            return (
+              <g key={value}>
+                <rect x={x} y={BASELINE - h} width={barWidth} height={h} rx="4" className={active ? 'bar active' : 'bar'} />
+                {active && activeValues.length <= 4 ? (
+                  <text x={xScale(value, min, max)} y={Math.max(TOP + 16, BASELINE - h - 8)} textAnchor="middle" className="bar-value-label">
+                    {value}
+                  </text>
+                ) : null}
+              </g>
+            )
           })}
+          {result.chartAnnotations?.barLabel ? (
+            <text x={clampLabelX(labelX)} y={TOP + 12} textAnchor="middle" className="chart-annotation-label">
+              {result.chartAnnotations.barLabel}
+            </text>
+          ) : null}
           {values.filter((value) => value === min || value === max || value % Math.max(1, Math.ceil(values.length / 8)) === 0).map((value) => (
             <text key={value} x={xScale(value, min, max)} y={BASELINE + 28} textAnchor="middle" className="chart-tick">
               {value}
             </text>
           ))}
+          <text x={WIDTH - PAD_X} y={HEIGHT - 12} textAnchor="end" className="axis-label">
+            {definition.variable}
+          </text>
         </svg>
       </section>
     )
@@ -105,6 +128,11 @@ export function DistributionChart({ definition, params, result }: DistributionCh
         {result.shadeRanges.map(([from, to], index) => (
           <path key={`${from}-${to}-${index}`} d={continuousShade(definition, params, domainMin, domainMax, maxY, from, to)} fill={`url(#areaFill-${definition.id})`} />
         ))}
+        {result.chartAnnotations?.shadeLabel ? (
+          <text x={PAD_X + 8} y={TOP + 18} className="chart-annotation-label">
+            {result.chartAnnotations.shadeLabel}
+          </text>
+        ) : null}
         <path d={continuousPath(definition, params, domainMin, domainMax, maxY)} className="curve-line" />
         <line x1={PAD_X} x2={WIDTH - PAD_X} y1={BASELINE} y2={BASELINE} className="chart-axis" />
         {Array.from({ length: 9 }, (_, index) => domainMin + ((domainMax - domainMin) * index) / 8).map((tick) => (
@@ -119,8 +147,14 @@ export function DistributionChart({ definition, params, result }: DistributionCh
           <g key={`${marker}-${index}`}>
             <line x1={xScale(marker, domainMin, domainMax)} x2={xScale(marker, domainMin, domainMax)} y1={TOP} y2={BASELINE} className="marker-line" />
             <circle cx={xScale(marker, domainMin, domainMax)} cy={BASELINE} r="5.5" className="marker-dot" />
+            <text x={clampLabelX(xScale(marker, domainMin, domainMax))} y={TOP + 38 + index * 20} textAnchor="middle" className="marker-label">
+              {result.chartAnnotations?.markerLabels?.[index] ?? marker.toLocaleString('zh-CN', { maximumFractionDigits: 3 })}
+            </text>
           </g>
         ))}
+        <text x={WIDTH - PAD_X} y={HEIGHT - 12} textAnchor="end" className="axis-label">
+          {definition.variable}
+        </text>
       </svg>
     </section>
   )
