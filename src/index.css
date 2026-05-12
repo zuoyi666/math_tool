@@ -675,13 +675,32 @@ button:disabled {
 
 .formula-block .formula-list {
   display: grid;
-  gap: 9px;
+  gap: 12px;
   padding-left: 0;
   list-style: none;
 }
 
-.formula-block .formula-list li {
+.formula-list-item {
   min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 10px;
+}
+
+.formula-item-title {
+  display: inline-flex;
+  margin-bottom: 7px;
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.formula-list-item p {
+  margin: 8px 0 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.65;
 }
 
 .formula-render {
@@ -696,6 +715,39 @@ button:disabled {
 .formula-render .katex-display {
   margin: 0;
   text-align: left;
+}
+
+.formula-terms {
+  display: grid;
+  gap: 6px;
+  margin: 9px 0 0;
+}
+
+.formula-terms div {
+  display: grid;
+  grid-template-columns: minmax(54px, max-content) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.formula-terms dt,
+.formula-terms dd {
+  margin: 0;
+}
+
+.formula-terms dt {
+  color: var(--primary-strong);
+  font-weight: 760;
+}
+
+.formula-terms dd {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.formula-term-symbol .katex {
+  font-size: 1em;
 }
 
 .history-panel {

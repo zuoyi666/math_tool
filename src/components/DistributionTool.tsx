@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BookmarkPlus, RotateCcw, Trash2 } from 'lucide-react'
 import { applyDistributionQuickValue, calculateDistribution, normalizeDistributionState, QUERY_MODE_LABELS } from '../distributions'
-import type { DistributionDefinition, DistributionState, HistoryEntry, QueryMode } from '../types'
+import type { DistributionDefinition, DistributionState, FormulaExplanation, HistoryEntry, QueryMode } from '../types'
 import { DistributionChart } from './DistributionChart'
 import { MathFormula } from './MathFormula'
 
@@ -39,6 +39,122 @@ function parseValue(value: string, fallback: number, min: number, max: number, i
   if (!Number.isFinite(parsed)) return fallback
   const bounded = Math.min(max, Math.max(min, parsed))
   return integer ? Math.round(bounded) : Math.round(bounded * 1000) / 1000
+}
+
+function cdfSymbol(definition: DistributionDefinition) {
+  if (definition.id === 'normal') return '\\Phi'
+  if (definition.id === 'studentT') return 'F_t'
+  if (definition.id === 'chiSquare') return 'F_{\\chi^2}'
+  if (definition.id === 'f') return 'F_F'
+  return 'F'
+}
+
+function queryFormulaExplanation(definition: DistributionDefinition, mode: QueryMode): Omit<FormulaExplanation, 'latex'> {
+  const cumulativeSymbol = cdfSymbol(definition)
+
+  if (mode === 'criticalLeft' || mode === 'criticalRight') {
+    return {
+      description: mode === 'criticalLeft' ? '临界值查询：给定左侧累计概率 p，反查对应的边界点。' : '临界值查询：给定右尾概率 p，先换成 1-p 的累计概率，再反查边界点。',
+      terms: [
+        { symbol: `${cumulativeSymbol}^{-1}`, meaning: '分布的反函数，也叫分位数函数或临界值函数。' },
+        { symbol: 'p', meaning: '输入的目标概率。' },
+      ],
+    }
+  }
+
+  if (definition.kind === 'discrete') {
+    if (mode === 'exact') {
+      return {
+        description: '点概率：计算离散随机变量恰好等于 k 的概率。',
+        terms: [
+          { symbol: 'X', meaning: '当前离散分布的随机变量。' },
+          { symbol: 'k', meaning: '输入的整数查询值。' },
+        ],
+      }
+    }
+    if (mode === 'right') {
+      return {
+        description: '右尾概率：计算 X 至少为 k 的概率；用 k-1 是为了保留 X=k 这一柱。',
+        terms: [
+          { symbol: 'F(k-1)', meaning: '小于 k 的累计概率。' },
+          { symbol: '1-F(k-1)', meaning: '从 k 到右端所有柱形概率的总和。' },
+        ],
+      }
+    }
+    if (mode === 'between') {
+      return {
+        description: '区间概率：计算从 a 到 b 之间所有整数取值的概率总和。',
+        terms: [
+          { symbol: 'a,b', meaning: '区间端点；如果输入顺序反了，会自动按小到大计算。' },
+          { symbol: 'F', meaning: '离散分布的累计分布函数。' },
+        ],
+      }
+    }
+    return {
+      description: '左尾概率：计算 X 不超过 k 的累计概率。',
+      terms: [
+        { symbol: 'F(k)', meaning: '从最小可能值累加到 k 的概率。' },
+        { symbol: 'k', meaning: '当前输入的整数查询值。' },
+      ],
+    }
+  }
+
+  if (mode === 'right') {
+    return {
+      description: '右尾概率：计算曲线在 x 右侧的面积，常用于右尾检验。',
+      terms: [
+        { symbol: `${cumulativeSymbol}(x)`, meaning: '从左端到 x 的累计概率。' },
+        { symbol: `1-${cumulativeSymbol}(x)`, meaning: 'x 右侧剩余面积。' },
+      ],
+    }
+  }
+  if (mode === 'between') {
+    return {
+      description: '区间概率：计算曲线在 a 与 b 之间的面积。',
+      terms: [
+        { symbol: 'a,b', meaning: '区间端点；输入顺序反了也会自动按小到大计算。' },
+        { symbol: `${cumulativeSymbol}(b)-${cumulativeSymbol}(a)`, meaning: '右端累计概率减去左端累计概率。' },
+      ],
+    }
+  }
+  if (mode === 'twoTail') {
+    return {
+      description: '双尾概率：计算左右两端同样极端区域的总面积。',
+      terms: [
+        { symbol: '|x|', meaning: 'x 的绝对值，用来同时定位左右两侧临界点。' },
+        { symbol: cumulativeSymbol, meaning: `${definition.title} 的累计分布函数。` },
+      ],
+    }
+  }
+  return {
+    description: '左尾概率：计算曲线在 x 左侧的累计面积。',
+    terms: [
+      { symbol: `${cumulativeSymbol}(x)`, meaning: '当前分布的累计分布函数。' },
+      { symbol: 'x', meaning: '当前输入的横轴查询值。' },
+    ],
+  }
+}
+
+function FormulaItem({ title, formula }: { title: string; formula: FormulaExplanation }) {
+  return (
+    <li className="formula-list-item">
+      <span className="formula-item-title">{title}</span>
+      <MathFormula latex={formula.latex} className="formula-render" />
+      <p>{formula.description}</p>
+      {formula.terms?.length ? (
+        <dl className="formula-terms">
+          {formula.terms.map((term) => (
+            <div key={`${formula.latex}-${term.symbol}`}>
+              <dt>
+                <MathFormula latex={term.symbol} displayMode={false} className="formula-term-symbol" />
+              </dt>
+              <dd>{term.meaning}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </li>
+  )
 }
 
 interface NumberControlProps {
@@ -91,6 +207,13 @@ export function DistributionTool({ definition }: DistributionToolProps) {
   const [history, setHistory] = useState<Array<HistoryEntry<DistributionState>>>(() => readHistory(definition.id))
   const normalizedState = useMemo(() => normalizeDistributionState(definition, state), [definition, state])
   const result = useMemo(() => calculateDistribution(definition, normalizedState), [definition, normalizedState])
+  const queryFormula: FormulaExplanation = useMemo(
+    () => ({
+      latex: result.formula,
+      ...queryFormulaExplanation(definition, normalizedState.mode),
+    }),
+    [definition, normalizedState.mode, result.formula],
+  )
 
   useEffect(() => {
     window.localStorage.setItem(storageKey(definition.id), JSON.stringify(history))
@@ -255,13 +378,9 @@ export function DistributionTool({ definition }: DistributionToolProps) {
           <div className="formula-block">
             <h3>公式说明</h3>
             <ul className="formula-list">
-              <li>
-                <MathFormula latex={result.formula} className="formula-render" />
-              </li>
+              <FormulaItem title="当前查询公式" formula={queryFormula} />
               {definition.formulas.map((formula) => (
-                <li key={formula}>
-                  <MathFormula latex={formula} className="formula-render" />
-                </li>
+                <FormulaItem key={formula.latex} title="分布基础" formula={formula} />
               ))}
             </ul>
           </div>

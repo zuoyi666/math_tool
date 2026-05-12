@@ -88,6 +88,28 @@ function discreteUpper(definition: DistributionDefinition, params: Record<string
   return Math.floor(max)
 }
 
+function continuousArgument(definition: DistributionDefinition) {
+  if (definition.id === 'normal') return 'z'
+  if (definition.id === 'studentT') return 't'
+  return 'x'
+}
+
+function cdfLatex(definition: DistributionDefinition, argument: string) {
+  if (definition.id === 'normal') return `\\Phi(${argument})`
+  if (definition.id === 'studentT') return `F_t(${argument})`
+  if (definition.id === 'chiSquare') return `F_{\\chi^2}(${argument})`
+  if (definition.id === 'f') return `F_F(${argument})`
+  return `F(${argument})`
+}
+
+function inverseCdfLatex(definition: DistributionDefinition, argument: string) {
+  if (definition.id === 'normal') return `\\Phi^{-1}(${argument})`
+  if (definition.id === 'studentT') return `F_t^{-1}(${argument})`
+  if (definition.id === 'chiSquare') return `F_{\\chi^2}^{-1}(${argument})`
+  if (definition.id === 'f') return `F_F^{-1}(${argument})`
+  return `F^{-1}(${argument})`
+}
+
 export function normalizeDistributionState(definition: DistributionDefinition, state: DistributionState): DistributionState {
   const normalizedParams = Object.fromEntries(
     definition.parameterDefinitions.map((item) => [item.key, param(definition.parameterDefinitions, state.params, item.key)]),
@@ -189,11 +211,12 @@ export function calculateDistribution(definition: DistributionDefinition, state:
   const x = normalized.x
   const a = Math.min(normalized.a, normalized.b)
   const b = Math.max(normalized.a, normalized.b)
+  const symbolicX = continuousArgument(definition)
   const cdfX = safeCdf(definition, x, params)
   const density = definition.pdf?.(x, params) ?? 0
   let probability = cdfX
   let label = `P(${variable} ≤ ${formatCompact(x)})`
-  let formula = 'F(x)'
+  let formula = cdfLatex(definition, symbolicX)
   let queryType: ProbabilityResult['queryType'] = 'probability'
   let primaryLabel = '概率'
   let primaryValue = formatNumber(probability, 6)
@@ -206,13 +229,13 @@ export function calculateDistribution(definition: DistributionDefinition, state:
   if (mode === 'right') {
     probability = 1 - cdfX
     label = `P(${variable} ≥ ${formatCompact(x)})`
-    formula = '1-F(x)'
+    formula = `1-${cdfLatex(definition, symbolicX)}`
     shadeRanges = [[x, domainMax]]
     interpretation = probabilityInterpretation(definition, label, probability, mode)
   } else if (mode === 'between') {
     probability = safeCdf(definition, b, params) - safeCdf(definition, a, params)
     label = `P(${formatCompact(a)} ≤ ${variable} ≤ ${formatCompact(b)})`
-    formula = 'F(b)-F(a)'
+    formula = `${cdfLatex(definition, 'b')}-${cdfLatex(definition, 'a')}`
     markers = [a, b]
     shadeRanges = [[a, b]]
     xSummary = `a = ${formatCompact(a)}, b = ${formatCompact(b)}`
@@ -221,7 +244,7 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     const absX = Math.abs(x)
     probability = 2 * (1 - safeCdf(definition, absX, params))
     label = `P(|${variable}| ≥ ${formatCompact(absX)})`
-    formula = '2\\left(1-F(|x|)\\right)'
+    formula = `2\\left(1-${cdfLatex(definition, `|${symbolicX}|`)}\\right)`
     markers = [-absX, absX]
     shadeRanges = [
       [domainMin, -absX],
@@ -233,7 +256,7 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     const critical = definition.quantile(normalized.p, params)
     probability = normalized.p
     label = `CDF⁻¹(${formatCompact(normalized.p)}) = ${formatCompact(critical)}`
-    formula = 'F^{-1}(p)'
+    formula = inverseCdfLatex(definition, 'p')
     queryType = 'critical'
     primaryLabel = '临界值'
     primaryValue = formatCompact(critical)
@@ -253,7 +276,7 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     const critical = definition.quantile(1 - normalized.p, params)
     probability = normalized.p
     label = `P(${variable} ≥ ${formatCompact(critical)}) = ${formatCompact(normalized.p)}`
-    formula = 'F^{-1}(1-p)'
+    formula = inverseCdfLatex(definition, '1-p')
     queryType = 'critical'
     primaryLabel = '临界值'
     primaryValue = formatCompact(critical)
@@ -318,7 +341,33 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['left', 'right', 'between', 'twoTail', 'criticalLeft', 'criticalRight'],
     defaultState: { mode: 'left', params: {}, x: 0, a: -1, b: 1, p: 0.95 },
     domain: () => [-4, 4],
-    formulas: ['Z \\sim N(0,1)', '\\phi(z)=\\frac{1}{\\sqrt{2\\pi}}e^{-z^2/2}', '\\Phi(z)=P(Z\\le z)'],
+    formulas: [
+      {
+        latex: 'Z \\sim N(0,1)',
+        description: '标准正态变量的记号，表示均值为 0、标准差为 1 的正态分布。',
+        terms: [
+          { symbol: 'Z', meaning: '标准化后的随机变量，也就是 z 分数。' },
+          { symbol: 'N(0,1)', meaning: '均值为 0、方差为 1 的正态分布。' },
+        ],
+      },
+      {
+        latex: '\\phi(z)=\\frac{1}{\\sqrt{2\\pi}}e^{-z^2/2}',
+        description: '标准正态密度函数，用来画钟形曲线；某一点的高度不是概率，曲线下的面积才是概率。',
+        terms: [
+          { symbol: '\\phi(z)', meaning: 'z 点处的概率密度。' },
+          { symbol: 'z', meaning: '横轴上的标准化取值。' },
+          { symbol: 'e', meaning: '自然常数，约为 2.718。' },
+        ],
+      },
+      {
+        latex: '\\Phi(z)=P(Z\\le z)',
+        description: '标准正态累计分布函数，表示 Z 不超过 z 的左侧面积。',
+        terms: [
+          { symbol: '\\Phi(z)', meaning: '从负无穷到 z 的累计概率。' },
+          { symbol: 'P(Z\\le z)', meaning: '事件 Z 小于或等于 z 的概率。' },
+        ],
+      },
+    ],
     quickValues: CONTINUOUS_QUICK,
     pdf: (x) => jStat.normal.pdf(x, 0, 1),
     cdf: (x) => jStat.normal.cdf(x, 0, 1),
@@ -334,7 +383,31 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['left', 'right', 'between', 'twoTail', 'criticalLeft', 'criticalRight'],
     defaultState: { mode: 'twoTail', params: { df: 10 }, x: 1.96, a: -1, b: 1, p: 0.95 },
     domain: () => [-6, 6],
-    formulas: ['T \\sim t_{\\nu}', '\\nu \\in \\mathbb{N}^{+}', 'P(|T|\\ge t)=2\\left(1-F_t(|t|)\\right)'],
+    formulas: [
+      {
+        latex: 'T \\sim t_{\\nu}',
+        description: 't 分布通常用于样本量较小、总体标准差未知时的均值检验。',
+        terms: [
+          { symbol: 'T', meaning: '服从 t 分布的统计量。' },
+          { symbol: '\\nu', meaning: '自由度，常见场景中等于样本量减 1。' },
+        ],
+      },
+      {
+        latex: '\\nu \\in \\mathbb{N}^{+}',
+        description: '自由度必须是正整数；自由度越大，t 分布越接近标准正态分布。',
+        terms: [
+          { symbol: '\\mathbb{N}^{+}', meaning: '正整数集合，如 1、2、3。' },
+        ],
+      },
+      {
+        latex: 'P(|T|\\ge t)=2\\left(1-F_t(|t|)\\right)',
+        description: '双尾概率表示两端同样极端区域的总面积，常用于双侧 t 检验。',
+        terms: [
+          { symbol: '|T|', meaning: 'T 的绝对值，用来同时考虑左右两端。' },
+          { symbol: 'F_t', meaning: 't 分布的累计分布函数。' },
+        ],
+      },
+    ],
     quickValues: CONTINUOUS_QUICK,
     parameterPresets: [
       { label: 'ν=1', params: { df: 1 } },
@@ -356,7 +429,31 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['left', 'right', 'between', 'criticalLeft', 'criticalRight'],
     defaultState: { mode: 'left', params: { df: 5 }, x: 5, a: 2, b: 8, p: 0.95 },
     domain: (p) => [0, Math.max(12, p.df + 5 * Math.sqrt(2 * p.df))],
-    formulas: ['X \\sim \\chi^2_k', 'k \\in \\mathbb{N}^{+}', 'P(a\\le X\\le b)=F_{\\chi^2}(b)-F_{\\chi^2}(a)'],
+    formulas: [
+      {
+        latex: 'X \\sim \\chi^2_k',
+        description: '卡方分布常用于方差检验、拟合优度检验和列联表检验。',
+        terms: [
+          { symbol: 'X', meaning: '服从卡方分布的随机变量，只能取非负值。' },
+          { symbol: 'k', meaning: '自由度，决定曲线形状。' },
+        ],
+      },
+      {
+        latex: 'k \\in \\mathbb{N}^{+}',
+        description: '自由度 k 必须是正整数；k 越大，分布峰值通常向右移动。',
+        terms: [
+          { symbol: '\\mathbb{N}^{+}', meaning: '正整数集合。' },
+        ],
+      },
+      {
+        latex: 'P(a\\le X\\le b)=F_{\\chi^2}(b)-F_{\\chi^2}(a)',
+        description: '区间概率等于右端点累计概率减去左端点累计概率。',
+        terms: [
+          { symbol: 'a,b', meaning: '区间左右端点，计算时会自动按小到大处理。' },
+          { symbol: 'F_{\\chi^2}', meaning: '卡方分布的累计分布函数。' },
+        ],
+      },
+    ],
     quickValues: POSITIVE_QUICK,
     parameterPresets: [
       { label: 'k=1', params: { df: 1 } },
@@ -381,7 +478,31 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['left', 'right', 'between', 'criticalLeft', 'criticalRight'],
     defaultState: { mode: 'right', params: { df1: 5, df2: 10 }, x: 2, a: 0.5, b: 2, p: 0.05 },
     domain: () => [0, 6],
-    formulas: ['X \\sim F_{d_1,d_2}', 'd_1,d_2 \\in \\mathbb{N}^{+}', 'P(X\\ge x)=1-F_F(x)'],
+    formulas: [
+      {
+        latex: 'X \\sim F_{d_1,d_2}',
+        description: 'F 分布常用于方差比检验和 ANOVA，取值范围为非负数。',
+        terms: [
+          { symbol: 'd_1', meaning: '分子自由度。' },
+          { symbol: 'd_2', meaning: '分母自由度。' },
+        ],
+      },
+      {
+        latex: 'd_1,d_2 \\in \\mathbb{N}^{+}',
+        description: '两个自由度都必须是正整数，且都会影响曲线形状和临界值。',
+        terms: [
+          { symbol: '\\mathbb{N}^{+}', meaning: '正整数集合。' },
+        ],
+      },
+      {
+        latex: 'P(X\\ge x)=1-F_F(x)',
+        description: '右尾概率是 F 检验最常用的查表方向，表示达到或超过 x 的概率。',
+        terms: [
+          { symbol: 'F_F(x)', meaning: 'F 分布在 x 处的累计概率。' },
+          { symbol: 'x', meaning: '横轴上的 F 统计量取值。' },
+        ],
+      },
+    ],
     quickValues: [0.1, 0.5, 1, 1.5, 2, 3, 4, 5],
     parameterPresets: [
       { label: '5 / 10', params: { df1: 5, df2: 10 } },
@@ -406,7 +527,33 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['exact', 'left', 'right', 'between'],
     defaultState: { mode: 'exact', params: { n: 10, p: 0.5 }, x: 5, a: 3, b: 7, p: 0.95 },
     domain: (p) => [0, p.n],
-    formulas: ['X \\sim \\operatorname{Bin}(n,p)', 'P(X=k)=\\binom{n}{k}p^k(1-p)^{n-k}', 'E(X)=np'],
+    formulas: [
+      {
+        latex: 'X \\sim \\operatorname{Bin}(n,p)',
+        description: '二项分布描述 n 次独立重复试验中成功次数 X 的分布。',
+        terms: [
+          { symbol: 'n', meaning: '试验总次数。' },
+          { symbol: 'p', meaning: '每次试验成功的概率。' },
+          { symbol: 'X', meaning: '成功次数。' },
+        ],
+      },
+      {
+        latex: 'P(X=k)=\\binom{n}{k}p^k(1-p)^{n-k}',
+        description: '点概率公式，表示 n 次试验中恰好成功 k 次的概率。',
+        terms: [
+          { symbol: 'k', meaning: '目标成功次数，必须是 0 到 n 之间的整数。' },
+          { symbol: '\\binom{n}{k}', meaning: '组合数，表示从 n 次试验中选出 k 次成功的方式数。' },
+          { symbol: '1-p', meaning: '单次试验失败的概率。' },
+        ],
+      },
+      {
+        latex: 'E(X)=np',
+        description: '期望值表示长期平均成功次数。',
+        terms: [
+          { symbol: 'E(X)', meaning: '随机变量 X 的期望或平均水平。' },
+        ],
+      },
+    ],
     quickValues: DISCRETE_QUICK,
     parameterPresets: [
       { label: 'n=10, p=.5', params: { n: 10, p: 0.5 } },
@@ -427,7 +574,33 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['exact', 'left', 'right', 'between'],
     defaultState: { mode: 'left', params: { lambda: 3 }, x: 3, a: 1, b: 5, p: 0.95 },
     domain: (p) => [0, Math.ceil(Math.max(12, p.lambda + 5 * Math.sqrt(p.lambda)))],
-    formulas: ['X \\sim \\operatorname{Pois}(\\lambda)', 'P(X=k)=\\frac{e^{-\\lambda}\\lambda^k}{k!}', 'E(X)=\\operatorname{Var}(X)=\\lambda'],
+    formulas: [
+      {
+        latex: 'X \\sim \\operatorname{Pois}(\\lambda)',
+        description: '泊松分布描述固定时间或空间区间内事件发生次数。',
+        terms: [
+          { symbol: 'X', meaning: '事件发生次数。' },
+          { symbol: '\\lambda', meaning: '单位区间内的平均发生次数，也叫强度。' },
+        ],
+      },
+      {
+        latex: 'P(X=k)=\\frac{e^{-\\lambda}\\lambda^k}{k!}',
+        description: '点概率公式，表示事件恰好发生 k 次的概率。',
+        terms: [
+          { symbol: 'k', meaning: '目标发生次数，必须是非负整数。' },
+          { symbol: 'e', meaning: '自然常数，约为 2.718。' },
+          { symbol: 'k!', meaning: 'k 的阶乘。' },
+        ],
+      },
+      {
+        latex: 'E(X)=\\operatorname{Var}(X)=\\lambda',
+        description: '泊松分布的均值和方差都等于 λ，这是它的重要特征。',
+        terms: [
+          { symbol: 'E(X)', meaning: '平均发生次数。' },
+          { symbol: '\\operatorname{Var}(X)', meaning: '发生次数的方差。' },
+        ],
+      },
+    ],
     quickValues: DISCRETE_QUICK,
     parameterPresets: [
       { label: 'λ=1', params: { lambda: 1 } },

@@ -40,6 +40,12 @@ export interface ParameterPreset {
   params: Record<string, number>
 }
 
+export interface FormulaExplanation {
+  latex: string
+  description: string
+  terms?: Array<{ symbol: string; meaning: string }>
+}
+
 export interface DistributionState {
   mode: QueryMode
   params: Record<string, number>
@@ -59,7 +65,7 @@ export interface DistributionDefinition {
   modes: QueryMode[]
   defaultState: DistributionState
   domain: (params: Record<string, number>) => [number, number]
-  formulas: string[]
+  formulas: FormulaExplanation[]
   quickValues: number[]
   parameterPresets?: ParameterPreset[]
   pdf?: (x: number, params: Record<string, number>) => number
