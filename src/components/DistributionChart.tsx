@@ -118,7 +118,7 @@ export function DistributionChart({ definition, params, result }: DistributionCh
             const h = BASELINE - yScale(definition.pmf?.(value, params) ?? 0, maxY)
             const x = xScale(value, min, max) - barWidth / 2
             return (
-              <g key={value}>
+              <g key={`bar-${value}`}>
                 <rect x={x} y={BASELINE - h} width={barWidth} height={h} rx="4" className={active ? 'bar active' : 'bar'} />
                 {active && activeValues.length <= 4 ? (
                   <text x={xScale(value, min, max)} y={Math.max(TOP + 16, BASELINE - h - 8)} textAnchor="middle" className="bar-value-label">
@@ -129,7 +129,7 @@ export function DistributionChart({ definition, params, result }: DistributionCh
             )
           })}
           {values.filter((value) => value === min || value === max || value % Math.max(1, Math.ceil(values.length / 8)) === 0).map((value) => (
-            <text key={value} x={xScale(value, min, max)} y={BASELINE + 28} textAnchor="middle" className="chart-tick">
+            <text key={`tick-${value}`} x={xScale(value, min, max)} y={BASELINE + 28} textAnchor="middle" className="chart-tick">
               {value}
             </text>
           ))}
@@ -166,8 +166,8 @@ export function DistributionChart({ definition, params, result }: DistributionCh
         ))}
         <path d={continuousPath(definition, params, domainMin, domainMax, maxY)} className="curve-line" />
         <line x1={PAD_X} x2={WIDTH - PAD_X} y1={BASELINE} y2={BASELINE} className="chart-axis" />
-        {Array.from({ length: 9 }, (_, index) => domainMin + ((domainMax - domainMin) * index) / 8).map((tick) => (
-          <g key={tick}>
+        {Array.from({ length: 9 }, (_, index) => domainMin + ((domainMax - domainMin) * index) / 8).map((tick, index) => (
+          <g key={`tick-${index}`}>
             <line x1={xScale(tick, domainMin, domainMax)} x2={xScale(tick, domainMin, domainMax)} y1={TOP} y2={BASELINE} className="chart-grid" />
             <text x={xScale(tick, domainMin, domainMax)} y={BASELINE + 30} textAnchor="middle" className="chart-tick">
               {tick.toLocaleString('zh-CN', { maximumFractionDigits: 1 })}

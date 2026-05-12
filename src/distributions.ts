@@ -140,23 +140,23 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     if (mode === 'left') {
       probability = safeCdf(definition, x, params)
       label = `P(${variable} ≤ ${x})`
-      formula = 'CDF(k)'
+      formula = 'F(k)'
       barRange = [0, x]
     } else if (mode === 'right') {
       probability = 1 - safeCdf(definition, x - 1, params)
       label = `P(${variable} ≥ ${x})`
-      formula = '1 - CDF(k - 1)'
+      formula = '1-F(k-1)'
       barRange = [x, upper]
     } else if (mode === 'between') {
       probability = safeCdf(definition, b, params) - safeCdf(definition, a - 1, params)
       label = `P(${a} ≤ ${variable} ≤ ${b})`
-      formula = 'CDF(b) - CDF(a - 1)'
+      formula = 'F(b)-F(a-1)'
       markers = [a, b]
       barRange = [a, b]
     } else {
       probability = pmf(x, params)
       label = `P(${variable} = ${x})`
-      formula = 'PMF(k)'
+      formula = 'P(X=k)'
       barRange = [x, x]
     }
 
@@ -193,7 +193,7 @@ export function calculateDistribution(definition: DistributionDefinition, state:
   const density = definition.pdf?.(x, params) ?? 0
   let probability = cdfX
   let label = `P(${variable} ≤ ${formatCompact(x)})`
-  let formula = 'CDF(x)'
+  let formula = 'F(x)'
   let queryType: ProbabilityResult['queryType'] = 'probability'
   let primaryLabel = '概率'
   let primaryValue = formatNumber(probability, 6)
@@ -206,13 +206,13 @@ export function calculateDistribution(definition: DistributionDefinition, state:
   if (mode === 'right') {
     probability = 1 - cdfX
     label = `P(${variable} ≥ ${formatCompact(x)})`
-    formula = '1 - CDF(x)'
+    formula = '1-F(x)'
     shadeRanges = [[x, domainMax]]
     interpretation = probabilityInterpretation(definition, label, probability, mode)
   } else if (mode === 'between') {
     probability = safeCdf(definition, b, params) - safeCdf(definition, a, params)
     label = `P(${formatCompact(a)} ≤ ${variable} ≤ ${formatCompact(b)})`
-    formula = 'CDF(b) - CDF(a)'
+    formula = 'F(b)-F(a)'
     markers = [a, b]
     shadeRanges = [[a, b]]
     xSummary = `a = ${formatCompact(a)}, b = ${formatCompact(b)}`
@@ -221,7 +221,7 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     const absX = Math.abs(x)
     probability = 2 * (1 - safeCdf(definition, absX, params))
     label = `P(|${variable}| ≥ ${formatCompact(absX)})`
-    formula = '2 × (1 - CDF(|x|))'
+    formula = '2\\left(1-F(|x|)\\right)'
     markers = [-absX, absX]
     shadeRanges = [
       [domainMin, -absX],
@@ -233,7 +233,7 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     const critical = definition.quantile(normalized.p, params)
     probability = normalized.p
     label = `CDF⁻¹(${formatCompact(normalized.p)}) = ${formatCompact(critical)}`
-    formula = 'Quantile(p)'
+    formula = 'F^{-1}(p)'
     queryType = 'critical'
     primaryLabel = '临界值'
     primaryValue = formatCompact(critical)
@@ -253,7 +253,7 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     const critical = definition.quantile(1 - normalized.p, params)
     probability = normalized.p
     label = `P(${variable} ≥ ${formatCompact(critical)}) = ${formatCompact(normalized.p)}`
-    formula = 'Quantile(1 - p)'
+    formula = 'F^{-1}(1-p)'
     queryType = 'critical'
     primaryLabel = '临界值'
     primaryValue = formatCompact(critical)
@@ -318,7 +318,7 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['left', 'right', 'between', 'twoTail', 'criticalLeft', 'criticalRight'],
     defaultState: { mode: 'left', params: {}, x: 0, a: -1, b: 1, p: 0.95 },
     domain: () => [-4, 4],
-    formulas: ['Z ~ N(0,1)', 'φ(z) = 1 / √(2π) × e^(-z²/2)', 'Φ(z) = P(Z ≤ z)'],
+    formulas: ['Z \\sim N(0,1)', '\\phi(z)=\\frac{1}{\\sqrt{2\\pi}}e^{-z^2/2}', '\\Phi(z)=P(Z\\le z)'],
     quickValues: CONTINUOUS_QUICK,
     pdf: (x) => jStat.normal.pdf(x, 0, 1),
     cdf: (x) => jStat.normal.cdf(x, 0, 1),
@@ -334,7 +334,7 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['left', 'right', 'between', 'twoTail', 'criticalLeft', 'criticalRight'],
     defaultState: { mode: 'twoTail', params: { df: 10 }, x: 1.96, a: -1, b: 1, p: 0.95 },
     domain: () => [-6, 6],
-    formulas: ['T ~ t(ν)', 'ν 为自由度', '双尾常用于 t 检验临界值'],
+    formulas: ['T \\sim t_{\\nu}', '\\nu \\in \\mathbb{N}^{+}', 'P(|T|\\ge t)=2\\left(1-F_t(|t|)\\right)'],
     quickValues: CONTINUOUS_QUICK,
     parameterPresets: [
       { label: 'ν=1', params: { df: 1 } },
@@ -356,7 +356,7 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['left', 'right', 'between', 'criticalLeft', 'criticalRight'],
     defaultState: { mode: 'left', params: { df: 5 }, x: 5, a: 2, b: 8, p: 0.95 },
     domain: (p) => [0, Math.max(12, p.df + 5 * Math.sqrt(2 * p.df))],
-    formulas: ['X ~ χ²(k)', 'k 为自由度', '常用于方差和拟合优度检验'],
+    formulas: ['X \\sim \\chi^2_k', 'k \\in \\mathbb{N}^{+}', 'P(a\\le X\\le b)=F_{\\chi^2}(b)-F_{\\chi^2}(a)'],
     quickValues: POSITIVE_QUICK,
     parameterPresets: [
       { label: 'k=1', params: { df: 1 } },
@@ -381,7 +381,7 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['left', 'right', 'between', 'criticalLeft', 'criticalRight'],
     defaultState: { mode: 'right', params: { df1: 5, df2: 10 }, x: 2, a: 0.5, b: 2, p: 0.05 },
     domain: () => [0, 6],
-    formulas: ['F ~ F(d1,d2)', '常用于方差比和 ANOVA', '右尾概率是 F 检验的常见形式'],
+    formulas: ['X \\sim F_{d_1,d_2}', 'd_1,d_2 \\in \\mathbb{N}^{+}', 'P(X\\ge x)=1-F_F(x)'],
     quickValues: [0.1, 0.5, 1, 1.5, 2, 3, 4, 5],
     parameterPresets: [
       { label: '5 / 10', params: { df1: 5, df2: 10 } },
@@ -406,7 +406,7 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['exact', 'left', 'right', 'between'],
     defaultState: { mode: 'exact', params: { n: 10, p: 0.5 }, x: 5, a: 3, b: 7, p: 0.95 },
     domain: (p) => [0, p.n],
-    formulas: ['X ~ Bin(n,p)', 'P(X=k)=C(n,k)p^k(1-p)^(n-k)', 'E(X)=np'],
+    formulas: ['X \\sim \\operatorname{Bin}(n,p)', 'P(X=k)=\\binom{n}{k}p^k(1-p)^{n-k}', 'E(X)=np'],
     quickValues: DISCRETE_QUICK,
     parameterPresets: [
       { label: 'n=10, p=.5', params: { n: 10, p: 0.5 } },
@@ -427,7 +427,7 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     modes: ['exact', 'left', 'right', 'between'],
     defaultState: { mode: 'left', params: { lambda: 3 }, x: 3, a: 1, b: 5, p: 0.95 },
     domain: (p) => [0, Math.ceil(Math.max(12, p.lambda + 5 * Math.sqrt(p.lambda)))],
-    formulas: ['X ~ Pois(λ)', 'P(X=k)=e^(-λ)λ^k/k!', 'E(X)=Var(X)=λ'],
+    formulas: ['X \\sim \\operatorname{Pois}(\\lambda)', 'P(X=k)=\\frac{e^{-\\lambda}\\lambda^k}{k!}', 'E(X)=\\operatorname{Var}(X)=\\lambda'],
     quickValues: DISCRETE_QUICK,
     parameterPresets: [
       { label: 'λ=1', params: { lambda: 1 } },

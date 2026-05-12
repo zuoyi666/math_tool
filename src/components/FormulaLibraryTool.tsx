@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import katex from 'katex'
-import 'katex/dist/katex.min.css'
 import type { FormulaEntry } from '../types'
+import { MathFormula } from './MathFormula'
 
 const FORMULAS: FormulaEntry[] = [
   { id: 'normal-pdf', category: '概率分布', title: '标准正态密度', latex: '\\phi(z)=\\frac{1}{\\sqrt{2\\pi}}e^{-z^2/2}', description: '标准正态分布的概率密度函数。' },
@@ -12,10 +11,6 @@ const FORMULAS: FormulaEntry[] = [
   { id: 'correlation', category: '描述统计', title: 'Pearson 相关系数', latex: 'r=\\frac{\\sum(x_i-\\bar{x})(y_i-\\bar{y})}{\\sqrt{\\sum(x_i-\\bar{x})^2\\sum(y_i-\\bar{y})^2}}', description: '衡量两个数值变量的线性相关程度。' },
   { id: 'bayes', category: '概率基础', title: '贝叶斯公式', latex: 'P(A|B)=\\frac{P(B|A)P(A)}{P(B)}', description: '用观察到的证据更新事件概率。' },
 ]
-
-function renderLatex(latex: string) {
-  return katex.renderToString(latex, { throwOnError: false, displayMode: true })
-}
 
 export function FormulaLibraryTool() {
   const [query, setQuery] = useState('')
@@ -48,10 +43,10 @@ export function FormulaLibraryTool() {
         {formulas.map((item) => (
           <article key={item.id} className="formula-card">
             <div>
-              <span>{item.category}</span>
+              <span className="formula-category">{item.category}</span>
               <h2>{item.title}</h2>
             </div>
-            <div className="latex-render" dangerouslySetInnerHTML={{ __html: renderLatex(item.latex) }} />
+            <MathFormula latex={item.latex} className="latex-render" />
             <p>{item.description}</p>
             <button type="button" className="ghost-button" onClick={() => void navigator.clipboard?.writeText(item.latex)}>
               复制 LaTeX

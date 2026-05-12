@@ -3,6 +3,7 @@ import { BookmarkPlus, RotateCcw, Trash2 } from 'lucide-react'
 import { applyDistributionQuickValue, calculateDistribution, normalizeDistributionState, QUERY_MODE_LABELS } from '../distributions'
 import type { DistributionDefinition, DistributionState, HistoryEntry, QueryMode } from '../types'
 import { DistributionChart } from './DistributionChart'
+import { MathFormula } from './MathFormula'
 
 interface DistributionToolProps {
   definition: DistributionDefinition
@@ -253,10 +254,14 @@ export function DistributionTool({ definition }: DistributionToolProps) {
           </div>
           <div className="formula-block">
             <h3>公式说明</h3>
-            <ul>
-              <li>{result.formula}</li>
+            <ul className="formula-list">
+              <li>
+                <MathFormula latex={result.formula} className="formula-render" />
+              </li>
               {definition.formulas.map((formula) => (
-                <li key={formula}>{formula}</li>
+                <li key={formula}>
+                  <MathFormula latex={formula} className="formula-render" />
+                </li>
               ))}
             </ul>
           </div>

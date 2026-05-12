@@ -79,7 +79,7 @@ export function DataTool() {
       <div className="formula-grid compact">
         {summary.correlations.map((item) => (
           <article key={`${item.left}-${item.right}`} className="formula-card">
-            <span>Pearson r</span>
+            <span className="formula-category">Pearson r</span>
             <h2>
               {item.left} / {item.right}
             </h2>
