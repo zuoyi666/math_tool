@@ -84,7 +84,35 @@ export interface HistoryEntry<TState> {
   value: string
 }
 
-export type CalculatorHistoryEntry = HistoryEntry<{ expression: string }>
+export type AngleMode = 'rad' | 'deg'
+export type CalculatorSymbolGroup = 'basic' | 'functions' | 'trig' | 'constants' | 'variables' | 'memory'
+
+export interface CalculatorSymbol {
+  id: string
+  label: string
+  insert: string
+  group: CalculatorSymbolGroup
+  ariaLabel: string
+  cursorOffset?: number
+}
+
+export interface CalculatorEvaluation {
+  ok: boolean
+  value?: unknown
+  numericValue?: number
+  displayValue: string
+  error?: string
+  committedScope?: Record<string, unknown>
+}
+
+export interface CalculatorState {
+  expression: string
+  angleMode: AngleMode
+  memory: number
+  ans: number
+}
+
+export type CalculatorHistoryEntry = HistoryEntry<{ expression: string; angleMode?: AngleMode }>
 
 export interface FormulaEntry {
   id: string
