@@ -1151,6 +1151,20 @@ button:disabled {
   font-weight: 720;
 }
 
+.inline-command {
+  display: inline-flex;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  padding: 8px 10px;
+  color: var(--primary-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 720;
+}
+
 .external-link,
 .settings-link {
   color: var(--primary-strong);

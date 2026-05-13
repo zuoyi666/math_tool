@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.math-tool
 
 # Editor directories and files
 .vscode/*

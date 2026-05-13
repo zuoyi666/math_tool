@@ -24,6 +24,12 @@ export function AboutTool() {
           </a>
         </p>
       </article>
+      <article className="workspace-card">
+        <h2>本地 App 图标</h2>
+        <p>运行安装命令后，会默认在桌面生成 Math Tool 本地入口，双击即可启动并打开浏览器。</p>
+        <code className="inline-command">npm run app:install</code>
+        <p>首次安装可手动输入目录；直接回车会使用桌面。</p>
+      </article>
       <article className="workspace-card learning-example-panel">
         <h2>例题学习路径</h2>
         <p>建议从标准正态的左尾概率开始，再切换到 t 分布临界值，最后用数据工具验证一组 CSV 的描述统计。</p>

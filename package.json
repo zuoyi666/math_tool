@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "checkpoint": "npm run lint && npm run test && npm run build"
+    "checkpoint": "npm run lint && npm run test && npm run build",
+    "app:install": "node scripts/install-local-app.mjs",
+    "app:run": "node scripts/run-local-app.mjs",
+    "app:stop": "node scripts/stop-local-app.mjs"
   },
   "dependencies": {
     "jstat": "^1.9.6",

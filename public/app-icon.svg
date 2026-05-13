@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Math Tool app icon">
+  <defs>
+    <linearGradient id="bg" x1="120" x2="904" y1="96" y2="928" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f7ffff" />
+      <stop offset="1" stop-color="#dff7f7" />
+    </linearGradient>
+    <linearGradient id="sigma" x1="287" x2="737" y1="190" y2="768" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f8d98" />
+      <stop offset="1" stop-color="#067481" />
+    </linearGradient>
+    <linearGradient id="curve" x1="204" x2="826" y1="694" y2="502" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f59e0b" />
+      <stop offset="1" stop-color="#ffcf75" />
+    </linearGradient>
+    <filter id="shadow" x="104" y="104" width="816" height="824" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="26" flood-color="#0f766e" flood-opacity=".18" stdDeviation="34" />
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="#f3fbfb" />
+  <g filter="url(#shadow)">
+    <rect x="132" y="112" width="760" height="784" rx="184" fill="url(#bg)" />
+    <rect x="132" y="112" width="760" height="784" rx="184" fill="none" stroke="#0f8792" stroke-opacity=".18" stroke-width="20" />
+  </g>
+  <path
+    fill="url(#sigma)"
+    d="M331 739c-22 0-35-25-21-43l165-207-165-168c-18-19-5-50 21-50h373c20 0 36 16 36 36v45c0 20-16 36-36 36H481l125 126c11 12 12 31 2 44L487 622h222c20 0 36 16 36 36v45c0 20-16 36-36 36H331Z"
+  />
+  <path
+    fill="none"
+    stroke="url(#curve)"
+    stroke-linecap="round"
+    stroke-width="46"
+    d="M234 687c72-96 156-143 251-143 127 0 150 102 255 102 37 0 70-13 98-38"
+  />
+  <circle cx="236" cy="687" r="28" fill="#f59e0b" stroke="#fffaf0" stroke-width="12" />
+  <circle cx="838" cy="608" r="28" fill="#ffc45f" stroke="#fffaf0" stroke-width="12" />
+</svg>
