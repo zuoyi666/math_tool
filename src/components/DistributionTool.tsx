@@ -3,6 +3,7 @@ import { BookmarkPlus, RotateCcw, Trash2 } from 'lucide-react'
 import {
   applyDistributionQuickValue,
   calculateDistribution,
+  distributionStateFromHash,
   formatProbability,
   getDistributionStats,
   getDistributionTableRows,
@@ -288,7 +289,7 @@ function NumberControl({ id, label, value, min, max, step, integer = false, desc
 }
 
 export function DistributionTool({ definition }: DistributionToolProps) {
-  const [state, setState] = useState<DistributionState>(() => normalizeDistributionState(definition, definition.defaultState))
+  const [state, setState] = useState<DistributionState>(() => distributionStateFromHash(definition, window.location.hash))
   const [history, setHistory] = useState<Array<HistoryEntry<DistributionState>>>(() => readHistory(definition.id))
   const normalizedState = useMemo(() => normalizeDistributionState(definition, state), [definition, state])
   const result = useMemo(() => calculateDistribution(definition, normalizedState), [definition, normalizedState])
@@ -305,6 +306,17 @@ export function DistributionTool({ definition }: DistributionToolProps) {
   useEffect(() => {
     window.localStorage.setItem(storageKey(definition.id), JSON.stringify(history))
   }, [definition.id, history])
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const hashTool = window.location.hash.replace(/^#\/?/, '').split('?')[0]
+      if (hashTool === definition.id) {
+        setState(distributionStateFromHash(definition, window.location.hash))
+      }
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [definition])
 
   const setMode = (mode: QueryMode) => setState((current) => ({ ...current, mode }))
   const setQueryValue = (key: 'x' | 'a' | 'b' | 'p', value: number) => setState((current) => ({ ...current, [key]: value }))

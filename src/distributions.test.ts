@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { applyDistributionQuickValue, calculateDistribution, DISTRIBUTIONS, getDistributionStats, getDistributionTableRows } from './distributions'
+import {
+  applyDistributionQuickValue,
+  calculateDistribution,
+  distributionStateFromSearch,
+  DISTRIBUTIONS,
+  getDistributionStats,
+  getDistributionTableRows,
+} from './distributions'
 
 describe('distribution engine', () => {
   it('calculates Student t left tail', () => {
@@ -180,5 +187,13 @@ describe('distribution engine', () => {
     expect(f.find((item) => item.label === '众数')?.value).toBe('0.5')
     expect(undefinedF.find((item) => item.label === '均值')?.value).toBe('未定义')
     expect(undefinedF.find((item) => item.label === '众数')?.value).toBe('不存在')
+  })
+
+  it('initializes distribution state from hash query parameters', () => {
+    const state = distributionStateFromSearch(DISTRIBUTIONS.poisson, '?lambda=3&mode=left&x=3')
+
+    expect(state.mode).toBe('left')
+    expect(state.params.lambda).toBe(3)
+    expect(state.x).toBe(3)
   })
 })

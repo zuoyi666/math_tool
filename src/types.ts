@@ -192,6 +192,16 @@ export interface DatasetSummary {
   columnCount: number
   numericColumns: NumericColumnSummary[]
   correlations: Array<{ left: string; right: string; value: number }>
+  distributionSuggestions: DistributionSuggestion[]
+}
+
+export interface DistributionSuggestion {
+  column: string
+  distributionId: DistributionId
+  label: string
+  params: Record<string, number>
+  reason: string
+  href: string
 }
 
 export type ProbabilityMode = 'left' | 'right' | 'between' | 'twoTail'

@@ -178,6 +178,47 @@ export function normalizeDistributionState(definition: DistributionDefinition, s
   }
 }
 
+function parseSearchNumber(params: URLSearchParams, key: string) {
+  const raw = params.get(key)
+  if (raw === null) return undefined
+  const value = Number(raw)
+  return Number.isFinite(value) ? value : undefined
+}
+
+export function distributionStateFromSearch(definition: DistributionDefinition, search: string): DistributionState {
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+  const mode = params.get('mode')
+  const nextState: DistributionState = {
+    ...definition.defaultState,
+    params: { ...definition.defaultState.params },
+  }
+
+  if (mode && definition.modes.includes(mode as QueryMode)) {
+    nextState.mode = mode as QueryMode
+  }
+
+  for (const item of definition.parameterDefinitions) {
+    const value = parseSearchNumber(params, item.key)
+    if (value !== undefined) {
+      nextState.params[item.key] = value
+    }
+  }
+
+  for (const key of ['x', 'a', 'b', 'p'] as const) {
+    const value = parseSearchNumber(params, key)
+    if (value !== undefined) {
+      nextState[key] = value
+    }
+  }
+
+  return normalizeDistributionState(definition, nextState)
+}
+
+export function distributionStateFromHash(definition: DistributionDefinition, hash: string) {
+  const query = hash.split('?')[1] ?? ''
+  return distributionStateFromSearch(definition, query)
+}
+
 export function applyDistributionQuickValue(definition: DistributionDefinition, state: DistributionState, value: number): DistributionState {
   if (state.mode === 'between') {
     return {

@@ -1,5 +1,5 @@
 import Papa from 'papaparse'
-import type { DatasetSummary, NumericColumnSummary } from './types'
+import type { DatasetSummary, DistributionSuggestion, NumericColumnSummary } from './types'
 
 function quantile(sorted: number[], q: number) {
   if (sorted.length === 0) return Number.NaN
@@ -41,11 +41,64 @@ function correlation(left: number[], right: number[]) {
   return numerator / (leftDen * rightDen)
 }
 
+function queryNumber(value: number) {
+  return Number(value.toFixed(4)).toString()
+}
+
+function clampProbability(value: number) {
+  return Math.min(0.999, Math.max(0.001, value))
+}
+
+function isNonNegativeIntegerColumn(values: number[]) {
+  return values.length > 0 && values.every((value) => Number.isInteger(value) && value >= 0)
+}
+
+function isBinaryColumn(values: number[]) {
+  return values.length > 0 && values.every((value) => value === 0 || value === 1)
+}
+
+function buildDistributionSuggestions(summaries: NumericColumnSummary[], valuesByColumn: Map<string, number[]>): DistributionSuggestion[] {
+  const suggestions: DistributionSuggestion[] = []
+
+  for (const summary of summaries) {
+    const values = valuesByColumn.get(summary.name) ?? []
+    if (!values.length) continue
+
+    if (isBinaryColumn(values)) {
+      const probability = clampProbability(summary.mean)
+      suggestions.push({
+        column: summary.name,
+        distributionId: 'binomial',
+        label: '二项 / 伯努利建模',
+        params: { n: 1, p: probability },
+        reason: `${summary.name} 只包含 0/1，可把 1 看作成功，样本成功率约为 ${queryNumber(summary.mean)}。`,
+        href: `#/binomial?n=1&p=${queryNumber(probability)}&mode=exact&x=1`,
+      })
+      continue
+    }
+
+    if (isNonNegativeIntegerColumn(values) && summary.mean <= 50) {
+      const lambda = Math.max(0.1, summary.mean)
+      suggestions.push({
+        column: summary.name,
+        distributionId: 'poisson',
+        label: '泊松分布建模',
+        params: { lambda },
+        reason: `${summary.name} 是非负整数计数，可先用样本均值 λ=${queryNumber(summary.mean)} 作为泊松强度。`,
+        href: `#/poisson?lambda=${queryNumber(lambda)}&mode=left&x=${Math.max(0, Math.round(summary.mean))}`,
+      })
+    }
+  }
+
+  return suggestions
+}
+
 export function analyzeCsv(csvText: string): DatasetSummary {
   const parsed = Papa.parse<Record<string, string>>(csvText, { header: true, skipEmptyLines: true })
   const rows = parsed.data.filter((row) => Object.values(row).some((value) => String(value ?? '').trim() !== ''))
   const fields = parsed.meta.fields ?? []
   const numericByColumn = new Map<string, number[]>()
+  const finiteValuesByColumn = new Map<string, number[]>()
   const summaries: NumericColumnSummary[] = []
 
   for (const field of fields) {
@@ -58,6 +111,10 @@ export function analyzeCsv(csvText: string): DatasetSummary {
     const summary = summarizeColumn(field, values)
     if (summary) {
       summaries.push(summary)
+      finiteValuesByColumn.set(
+        field,
+        values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value)),
+      )
       numericByColumn.set(
         field,
         values.map((value) => (typeof value === 'number' ? value : Number.NaN)),
@@ -79,6 +136,7 @@ export function analyzeCsv(csvText: string): DatasetSummary {
     columnCount: fields.length,
     numericColumns: summaries,
     correlations,
+    distributionSuggestions: buildDistributionSuggestions(summaries, finiteValuesByColumn),
   }
 }
 

@@ -11,7 +11,7 @@ const DataTool = lazy(() => import('./components/DataTool').then((module) => ({ 
 const AboutTool = lazy(() => import('./components/AboutTool').then((module) => ({ default: module.AboutTool })))
 
 function readHashTool(): ToolId {
-  const raw = window.location.hash.replace(/^#\/?/, '')
+  const raw = window.location.hash.replace(/^#\/?/, '').split('?')[0]
   return isToolId(raw) ? raw : DEFAULT_TOOL_ID
 }
 

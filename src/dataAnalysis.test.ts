@@ -18,4 +18,26 @@ describe('data analysis', () => {
     expect(summary.numericColumns[0].count).toBe(2)
     expect(summary.numericColumns[0].missing).toBe(0)
   })
+
+  it('suggests poisson modeling for non-negative integer counts', () => {
+    const summary = analyzeCsv('calls\n0\n1\n2\n3\n4')
+
+    expect(summary.distributionSuggestions[0]).toMatchObject({
+      column: 'calls',
+      distributionId: 'poisson',
+      params: { lambda: 2 },
+      href: '#/poisson?lambda=2&mode=left&x=2',
+    })
+  })
+
+  it('suggests binomial modeling for binary columns', () => {
+    const summary = analyzeCsv('converted\n0\n1\n1\n0\n1')
+
+    expect(summary.distributionSuggestions[0]).toMatchObject({
+      column: 'converted',
+      distributionId: 'binomial',
+      params: { n: 1, p: 0.6 },
+      href: '#/binomial?n=1&p=0.6&mode=exact&x=1',
+    })
+  })
 })

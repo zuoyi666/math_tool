@@ -1605,6 +1605,39 @@ button:disabled {
   font-size: 26px;
 }
 
+.suggestion-panel {
+  margin-bottom: 16px;
+}
+
+.suggestion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.suggestion-card {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.suggestion-card span {
+  color: var(--primary-strong);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.suggestion-card h3 {
+  margin: 6px 0 8px;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.suggestion-card p {
+  margin: 0 0 12px;
+}
+
 .about-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

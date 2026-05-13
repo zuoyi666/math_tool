@@ -51,6 +51,29 @@ export function DataTool() {
         </div>
       </div>
 
+      {summary.distributionSuggestions.length ? (
+        <section className="workspace-card suggestion-panel">
+          <div className="learning-panel-heading">
+            <div>
+              <h2>分布建模建议</h2>
+              <p>根据数值列的取值形态，快速把数据带入合适的分布工具。</p>
+            </div>
+          </div>
+          <div className="suggestion-grid">
+            {summary.distributionSuggestions.map((suggestion) => (
+              <article key={`${suggestion.column}-${suggestion.distributionId}`} className="suggestion-card">
+                <span>{suggestion.column}</span>
+                <h3>{suggestion.label}</h3>
+                <p>{suggestion.reason}</p>
+                <a className="ghost-button" href={suggestion.href}>
+                  打开对应工具
+                </a>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <div className="history-table-wrap">
         <table className="history-table">
           <thead>
