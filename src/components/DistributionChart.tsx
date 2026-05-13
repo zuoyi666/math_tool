@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { adaptiveSampleRange, type SamplePoint } from '../chartSampling'
 import type { DistributionDefinition, ProbabilityResult } from '../types'
 
 const WIDTH = 920
@@ -5,7 +7,7 @@ const HEIGHT = 360
 const PAD_X = 42
 const TOP = 64
 const BASELINE = 286
-const SAMPLE_COUNT = 220
+const SAMPLE_COUNT = 240
 
 interface DistributionChartProps {
   definition: DistributionDefinition
@@ -21,78 +23,67 @@ function yScale(value: number, maxY: number) {
   return BASELINE - (value / (maxY || 1)) * (BASELINE - TOP)
 }
 
-function estimateTextWidth(text: string) {
-  return Array.from(text).reduce((width, char) => width + (char.charCodeAt(0) > 255 ? 14 : 8), 0)
-}
-
-function markerLabelY(index: number) {
-  return 28 + (index % 2) * 24
-}
-
-function markerLabelPlacement(index: number, marker: number, min: number, max: number, label: string) {
-  const markerX = xScale(marker, min, max)
-  const labelWidth = Math.min(156, Math.max(56, estimateTextWidth(label) + 18))
-  const labelHeight = 24
-  const y = markerLabelY(index)
-  const placeRight = markerX < WIDTH / 2
-  let textAnchor: 'start' | 'end' = placeRight ? 'start' : 'end'
-  let textX = markerX + (placeRight ? 14 : -14)
-  let rectX = placeRight ? textX - 8 : textX - labelWidth + 8
-
-  if (rectX < PAD_X) {
-    textAnchor = 'start'
-    textX = markerX + 14
-    rectX = textX - 8
-  }
-
-  if (rectX + labelWidth > WIDTH - PAD_X) {
-    textAnchor = 'end'
-    textX = markerX - 14
-    rectX = textX - labelWidth + 8
-  }
-
-  rectX = Math.min(WIDTH - PAD_X - labelWidth, Math.max(PAD_X, rectX))
-  textX = textAnchor === 'start' ? rectX + 8 : rectX + labelWidth - 8
-
-  return {
-    rectX,
-    rectY: y - labelHeight + 6,
-    labelWidth,
-    labelHeight,
-    textAnchor,
-    textX,
-    y,
-  }
-}
-
 function pathFromPoints(points: ReadonlyArray<readonly [number, number]>) {
   return points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' ')
 }
 
-function continuousPath(definition: DistributionDefinition, params: Record<string, number>, min: number, max: number, maxY: number) {
-  const points = Array.from({ length: SAMPLE_COUNT + 1 }, (_, index) => {
-    const ratio = index / SAMPLE_COUNT
-    const x = min + (max - min) * ratio
-    return [xScale(x, min, max), yScale(definition.pdf?.(x, params) ?? 0, maxY)] as const
+function formatChartNumber(value: number, digits = 4) {
+  return value.toLocaleString('zh-CN', { maximumFractionDigits: digits })
+}
+
+function formatChartProbability(value: number) {
+  return value.toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+}
+
+function safeDensity(definition: DistributionDefinition, params: Record<string, number>, x: number) {
+  const value = definition.pdf?.(x, params) ?? 0
+  return Number.isFinite(value) && value > 0 ? value : 0
+}
+
+function pixelPoints(points: ReadonlyArray<SamplePoint>, min: number, max: number, maxY: number) {
+  return points.map(([x, y]) => [xScale(x, min, max), yScale(y, maxY)] as const)
+}
+
+function estimateMaxY(definition: DistributionDefinition, params: Record<string, number>, min: number, max: number) {
+  const sampleValues = Array.from({ length: SAMPLE_COUNT + 1 }, (_, index) => {
+    const x = min + ((max - min) * index) / SAMPLE_COUNT
+    return safeDensity(definition, params, x)
   })
-  return pathFromPoints(points)
+  return Math.max(...sampleValues, 0.01)
+}
+
+function continuousPath(definition: DistributionDefinition, params: Record<string, number>, min: number, max: number, maxY: number) {
+  const rawPoints = adaptiveSampleRange(min, max, (x) => safeDensity(definition, params, x), {
+    initialSegments: 72,
+    maxDepth: 6,
+    scale: maxY,
+    tolerance: 0.0022,
+  })
+  return pathFromPoints(pixelPoints(rawPoints, min, max, maxY))
 }
 
 function continuousShade(definition: DistributionDefinition, params: Record<string, number>, min: number, max: number, maxY: number, from: number, to: number) {
   const start = Math.max(min, Math.min(from, to))
   const end = Math.min(max, Math.max(from, to))
-  const samples = Math.max(16, Math.round(((end - start) / (max - min || 1)) * SAMPLE_COUNT))
-  const points = Array.from({ length: samples + 1 }, (_, index) => {
-    const ratio = index / samples
-    const x = start + (end - start) * ratio
-    return [xScale(x, min, max), yScale(definition.pdf?.(x, params) ?? 0, maxY)] as const
+  if (end <= start) {
+    return ''
+  }
+
+  const spanRatio = (end - start) / (max - min || 1)
+  const rawPoints = adaptiveSampleRange(start, end, (x) => safeDensity(definition, params, x), {
+    initialSegments: Math.max(12, Math.round(spanRatio * 72)),
+    maxDepth: 6,
+    scale: maxY,
+    tolerance: 0.0022,
   })
+  const points = pixelPoints(rawPoints, min, max, maxY)
   return `M ${xScale(start, min, max).toFixed(2)} ${BASELINE} ${pathFromPoints(points).replace('M', 'L')} L ${xScale(end, min, max).toFixed(
     2,
   )} ${BASELINE} Z`
 }
 
 export function DistributionChart({ definition, params, result }: DistributionChartProps) {
+  const [hoveredBar, setHoveredBar] = useState<number | null>(null)
   const [domainMin, domainMax] = definition.domain(params)
 
   if (definition.kind === 'discrete') {
@@ -103,6 +94,10 @@ export function DistributionChart({ definition, params, result }: DistributionCh
     const maxY = Math.max(...heights, 0.01)
     const barWidth = Math.max(5, (WIDTH - PAD_X * 2) / values.length - 4)
     const activeValues = result.barRange ? values.filter((value) => value >= result.barRange![0] && value <= result.barRange![1]) : []
+    const focusedValue = hoveredBar ?? (activeValues.length === 1 ? activeValues[0] : null)
+    const focusedPmf = focusedValue === null ? null : definition.pmf?.(focusedValue, params) ?? 0
+    const focusedCdf = focusedValue === null ? null : definition.cdf(focusedValue, params)
+    const focusedRightTail = focusedValue === null ? null : 1 - definition.cdf(focusedValue - 1, params)
 
     return (
       <section className="chart-panel" aria-label={`${definition.title} 图表`}>
@@ -110,6 +105,14 @@ export function DistributionChart({ definition, params, result }: DistributionCh
           <span className="legend-swatch" />
           <span>{result.label}</span>
           {result.chartAnnotations?.barLabel ? <span className="chart-legend-detail">{result.chartAnnotations.barLabel}</span> : null}
+          {activeValues.length > 1 ? (
+            <span className="chart-data-chip">选中 k={activeValues[0]} 到 {activeValues[activeValues.length - 1]}</span>
+          ) : null}
+          {focusedValue !== null && focusedPmf !== null && focusedCdf !== null && focusedRightTail !== null ? (
+            <span className="chart-data-chip">
+              k={focusedValue} · PMF {formatChartProbability(focusedPmf)} · CDF {formatChartProbability(focusedCdf)} · 右尾 {formatChartProbability(focusedRightTail)}
+            </span>
+          ) : null}
         </div>
         <svg className="normal-chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={result.label}>
           <line x1={PAD_X} x2={WIDTH - PAD_X} y1={BASELINE} y2={BASELINE} className="chart-axis" />
@@ -118,13 +121,17 @@ export function DistributionChart({ definition, params, result }: DistributionCh
             const h = BASELINE - yScale(definition.pmf?.(value, params) ?? 0, maxY)
             const x = xScale(value, min, max) - barWidth / 2
             return (
-              <g key={`bar-${value}`}>
+              <g
+                key={`bar-${value}`}
+                tabIndex={0}
+                role="listitem"
+                aria-label={`k=${value}, PMF=${formatChartProbability(definition.pmf?.(value, params) ?? 0)}`}
+                onMouseEnter={() => setHoveredBar(value)}
+                onMouseLeave={() => setHoveredBar(null)}
+                onFocus={() => setHoveredBar(value)}
+                onBlur={() => setHoveredBar(null)}
+              >
                 <rect x={x} y={BASELINE - h} width={barWidth} height={h} rx="4" className={active ? 'bar active' : 'bar'} />
-                {active && activeValues.length <= 4 ? (
-                  <text x={xScale(value, min, max)} y={Math.max(TOP + 16, BASELINE - h - 8)} textAnchor="middle" className="bar-value-label">
-                    {value}
-                  </text>
-                ) : null}
               </g>
             )
           })}
@@ -141,11 +148,7 @@ export function DistributionChart({ definition, params, result }: DistributionCh
     )
   }
 
-  const sampleValues = Array.from({ length: SAMPLE_COUNT + 1 }, (_, index) => {
-    const x = domainMin + ((domainMax - domainMin) * index) / SAMPLE_COUNT
-    return definition.pdf?.(x, params) ?? 0
-  })
-  const maxY = Math.max(...sampleValues, 0.01)
+  const maxY = estimateMaxY(definition, params, domainMin, domainMax)
 
   return (
     <section className="chart-panel" aria-label={`${definition.title} 曲线图`}>
@@ -153,6 +156,11 @@ export function DistributionChart({ definition, params, result }: DistributionCh
         <span className="legend-swatch" />
         <span>{result.label}</span>
         {result.chartAnnotations?.shadeLabel ? <span className="chart-legend-detail">{result.chartAnnotations.shadeLabel}</span> : null}
+        {result.chartAnnotations?.markerLabels?.map((label, index) => (
+          <span key={`${label}-${index}`} className="chart-data-chip">
+            {label}
+          </span>
+        ))}
       </div>
       <svg className="normal-chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${result.label} 的阴影面积`}>
         <defs>
@@ -175,23 +183,12 @@ export function DistributionChart({ definition, params, result }: DistributionCh
           </g>
         ))}
         {result.markers.map((marker, index) => {
-          const label = result.chartAnnotations?.markerLabels?.[index] ?? marker.toLocaleString('zh-CN', { maximumFractionDigits: 3 })
-          const placement = markerLabelPlacement(index, marker, domainMin, domainMax, label)
-
           return (
             <g key={`${marker}-${index}`}>
               <line x1={xScale(marker, domainMin, domainMax)} x2={xScale(marker, domainMin, domainMax)} y1={TOP} y2={BASELINE} className="marker-line" />
               <circle cx={xScale(marker, domainMin, domainMax)} cy={BASELINE} r="5.5" className="marker-dot" />
-              <rect
-                x={placement.rectX}
-                y={placement.rectY}
-                width={placement.labelWidth}
-                height={placement.labelHeight}
-                rx="5"
-                className="marker-label-box"
-              />
-              <text x={placement.textX} y={placement.y} textAnchor={placement.textAnchor} className="marker-label">
-                {label}
+              <text x={xScale(marker, domainMin, domainMax)} y={TOP - 16} textAnchor="middle" className="marker-index-label">
+                {formatChartNumber(marker, 3)}
               </text>
             </g>
           )

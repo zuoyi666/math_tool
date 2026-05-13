@@ -554,6 +554,19 @@ button:disabled {
   font-weight: 760;
 }
 
+.chart-data-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 6px;
+  padding: 3px 8px;
+  color: var(--primary-strong);
+  background: rgba(224, 247, 247, 0.62);
+  font-size: 13px;
+  font-weight: 720;
+}
+
 .legend-swatch {
   width: 30px;
   height: 14px;
@@ -612,6 +625,16 @@ button:disabled {
   fill: var(--accent);
   font-size: 15px;
   font-weight: 740;
+}
+
+.marker-index-label {
+  fill: var(--accent);
+  font-size: 13px;
+  font-weight: 760;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 4px;
+  stroke-linejoin: round;
 }
 
 .chart-annotation-label,
@@ -1590,10 +1613,18 @@ button:disabled {
 
 .bar {
   fill: #dbe7ee;
+  transition:
+    fill 140ms ease,
+    opacity 140ms ease;
 }
 
 .bar.active {
   fill: #f4b95f;
+}
+
+g:focus .bar,
+.bar:hover {
+  fill: #f0a83a;
 }
 
 @media (max-width: 1180px) {
@@ -1873,5 +1904,9 @@ button:disabled {
 
   .marker-label {
     font-size: 15px;
+  }
+
+  .marker-index-label {
+    font-size: 12px;
   }
 }
