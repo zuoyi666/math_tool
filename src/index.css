@@ -1566,6 +1566,17 @@ button:disabled {
   font-weight: 760;
 }
 
+.formula-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.formula-card-actions a {
+  text-decoration: none;
+}
+
 .latex-render {
   display: block;
   overflow-x: auto;

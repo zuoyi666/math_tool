@@ -166,6 +166,7 @@ export interface FormulaEntry {
   title: string
   latex: string
   description: string
+  relatedTool?: ToolId
   example?: {
     question: string
     solution: string
