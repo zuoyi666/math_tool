@@ -1,5 +1,6 @@
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
+import './MathFormula.css'
 
 interface MathFormulaProps {
   latex: string
@@ -16,5 +17,11 @@ function renderLatex(latex: string, displayMode = true) {
 }
 
 export function MathFormula({ latex, displayMode = true, className = '' }: MathFormulaProps) {
-  return <span className={className} dangerouslySetInnerHTML={{ __html: renderLatex(latex, displayMode) }} />
+  const html = { __html: renderLatex(latex, displayMode) }
+
+  if (displayMode) {
+    return <div className={className} dangerouslySetInnerHTML={html} />
+  }
+
+  return <span className={className} dangerouslySetInnerHTML={html} />
 }

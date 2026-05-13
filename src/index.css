@@ -360,6 +360,7 @@ button:disabled {
 .primary-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(380px, 430px);
+  align-items: start;
   gap: 0;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -367,6 +368,7 @@ button:disabled {
 }
 
 .main-column {
+  align-self: start;
   min-width: 0;
   border-right: 1px solid var(--border);
   padding: 0 26px 24px;
@@ -691,8 +693,8 @@ button:disabled {
 
 .distribution-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
 }
 
 .distribution-stat-card {
@@ -700,7 +702,7 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #ffffff;
-  padding: 11px;
+  padding: 13px;
 }
 
 .distribution-stat-card span {
@@ -728,13 +730,17 @@ button:disabled {
 
 .stat-formula {
   display: block;
-  margin-top: 7px;
+  margin-top: 8px;
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #ffffff;
+  padding: 6px 8px;
+  font-family: 'Times New Roman', ui-serif, Georgia, serif;
+  font-size: 14px;
   color: #334155;
-}
-
-.stat-formula .katex {
-  font-size: 0.96em;
+  white-space: nowrap;
+  scrollbar-width: thin;
 }
 
 .distribution-table-wrap {
@@ -786,6 +792,7 @@ button:disabled {
 }
 
 .result-panel {
+  align-self: start;
   min-width: 0;
   background: var(--surface);
   padding: 18px 24px 22px;
@@ -878,6 +885,24 @@ button:disabled {
 
 .formula-block {
   background: var(--surface-soft);
+}
+
+.learning-formula-block {
+  border: 1px solid var(--border);
+}
+
+.learning-formula-block .formula-list {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: start;
+  margin-top: 12px;
+}
+
+.learning-formula-block .formula-list-item {
+  padding: 14px;
+}
+
+.learning-formula-block .formula-render {
+  min-height: 46px;
 }
 
 .block-title {

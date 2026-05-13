@@ -186,12 +186,45 @@ function FormulaItem({ title, formula }: { title: string; formula: FormulaExplan
   )
 }
 
+function compactFormula(latex: string) {
+  return latex
+    .replace(/\\operatorname\{Var\}/g, 'Var')
+    .replace(/\\operatorname\{mode\}/g, 'mode')
+    .replace(/\\mathbb\{R\}/g, 'ℝ')
+    .replace(/\\mathbb\{N\}\^\{\+\}/g, 'ℕ+')
+    .replace(/\\sigma/g, 'σ')
+    .replace(/\\gamma_1/g, 'γ₁')
+    .replace(/\\gamma_2/g, 'γ₂')
+    .replace(/\\beta_2/g, 'β₂')
+    .replace(/\\lambda/g, 'λ')
+    .replace(/\\nu/g, 'ν')
+    .replace(/\\in/g, '∈')
+    .replace(/\\Rightarrow/g, '⇒')
+    .replace(/\\le/g, '≤')
+    .replace(/\\ge/g, '≥')
+    .replace(/\\sim/g, '~')
+    .replace(/\\ldots/g, '…')
+    .replace(/\\lfloor/g, '⌊')
+    .replace(/\\rfloor/g, '⌋')
+    .replace(/\\max/g, 'max')
+    .replace(/\\times/g, '×')
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/($2)')
+    .replace(/\\sqrt\{([^{}]+)\}/g, '√($1)')
+    .replace(/\^2/g, '²')
+    .replace(/_1/g, '₁')
+    .replace(/_2/g, '₂')
+    .replace(/\\\{/g, '{')
+    .replace(/\\\}/g, '}')
+    .replace(/[{}]/g, '')
+    .replace(/\\/g, '')
+}
+
 function StatisticCard({ item }: { item: DistributionStatistic }) {
   return (
     <article className="distribution-stat-card">
       <span>{item.label}</span>
       <strong>{item.value}</strong>
-      {item.latex ? <MathFormula latex={item.latex} displayMode={false} className="stat-formula" /> : null}
+      {item.latex ? <code className="stat-formula">{compactFormula(item.latex)}</code> : null}
       {item.description ? <p>{item.description}</p> : null}
     </article>
   )
@@ -470,6 +503,21 @@ export function DistributionTool({ definition }: DistributionToolProps) {
           ) : null}
 
           <ProbabilityTable rows={probabilityRows} activeRange={result.barRange} />
+
+          <section className="formula-block learning-formula-block" aria-label={`${definition.title} 公式说明`}>
+            <div className="learning-panel-heading">
+              <div>
+                <h2>公式说明</h2>
+                <p>当前查询方式和分布基础公式的含义说明。</p>
+              </div>
+            </div>
+            <ul className="formula-list">
+              <FormulaItem title="当前查询公式" formula={queryFormula} />
+              {definition.formulas.map((formula) => (
+                <FormulaItem key={formula.latex} title="分布基础" formula={formula} />
+              ))}
+            </ul>
+          </section>
         </div>
 
         <aside className="result-panel">
@@ -491,15 +539,6 @@ export function DistributionTool({ definition }: DistributionToolProps) {
           <div className="interpretation-block">
             <h3>结果解读</h3>
             <p>{result.interpretation}</p>
-          </div>
-          <div className="formula-block">
-            <h3>公式说明</h3>
-            <ul className="formula-list">
-              <FormulaItem title="当前查询公式" formula={queryFormula} />
-              {definition.formulas.map((formula) => (
-                <FormulaItem key={formula.latex} title="分布基础" formula={formula} />
-              ))}
-            </ul>
           </div>
         </aside>
       </div>

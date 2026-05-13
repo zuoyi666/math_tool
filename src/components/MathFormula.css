@@ -1,0 +1,23 @@
+.formula-render .katex-display > .katex,
+.latex-render .katex-display > .katex,
+.formula-example-render .katex-display > .katex {
+  display: inline-block;
+  max-width: none;
+  min-width: max-content;
+  white-space: nowrap;
+}
+
+.formula-render .katex-display > .katex > .katex-html,
+.latex-render .katex-display > .katex > .katex-html,
+.formula-example-render .katex-display > .katex > .katex-html {
+  display: inline-block;
+  max-width: none;
+  min-width: max-content;
+  white-space: nowrap;
+}
+
+.formula-render .katex .base,
+.latex-render .katex .base,
+.formula-example-render .katex .base {
+  width: auto;
+}
