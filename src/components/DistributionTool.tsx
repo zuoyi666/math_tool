@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BookmarkPlus, RotateCcw, Trash2 } from 'lucide-react'
-import { applyDistributionQuickValue, calculateDistribution, normalizeDistributionState, QUERY_MODE_LABELS } from '../distributions'
-import type { DistributionDefinition, DistributionState, FormulaExplanation, HistoryEntry, QueryMode } from '../types'
+import {
+  applyDistributionQuickValue,
+  calculateDistribution,
+  formatProbability,
+  getDistributionStats,
+  getDistributionTableRows,
+  normalizeDistributionState,
+  QUERY_MODE_LABELS,
+} from '../distributions'
+import type { DistributionDefinition, DistributionState, DistributionStatistic, DistributionTableRow, FormulaExplanation, HistoryEntry, QueryMode } from '../types'
 import { DistributionChart } from './DistributionChart'
 import { MathFormula } from './MathFormula'
 
@@ -177,6 +185,63 @@ function FormulaItem({ title, formula }: { title: string; formula: FormulaExplan
   )
 }
 
+function StatisticCard({ item }: { item: DistributionStatistic }) {
+  return (
+    <article className="distribution-stat-card">
+      <span>{item.label}</span>
+      <strong>{item.value}</strong>
+      {item.latex ? <MathFormula latex={item.latex} displayMode={false} className="stat-formula" /> : null}
+      {item.description ? <p>{item.description}</p> : null}
+    </article>
+  )
+}
+
+function ProbabilityTable({
+  rows,
+  activeRange,
+}: {
+  rows: DistributionTableRow[]
+  activeRange?: [number, number]
+}) {
+  if (!rows.length) return null
+
+  return (
+    <section className="probability-table-panel" aria-label="离散概率表">
+      <div className="learning-panel-heading">
+        <div>
+          <h2>概率表</h2>
+          <p>查看每个整数取值的点概率、左尾累计和右尾累计。</p>
+        </div>
+      </div>
+      <div className="distribution-table-wrap">
+        <table className="distribution-table">
+          <thead>
+            <tr>
+              <th>k</th>
+              <th>P(X=k)</th>
+              <th>P(X≤k)</th>
+              <th>P(X≥k)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const active = activeRange ? row.k >= activeRange[0] && row.k <= activeRange[1] : false
+              return (
+                <tr key={row.k} className={active ? 'active' : ''}>
+                  <td>{row.k}</td>
+                  <td>{formatProbability(row.pmf)}</td>
+                  <td>{formatProbability(row.cdf)}</td>
+                  <td>{formatProbability(row.rightTail)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
 interface NumberControlProps {
   id: string
   label: string
@@ -227,6 +292,8 @@ export function DistributionTool({ definition }: DistributionToolProps) {
   const [history, setHistory] = useState<Array<HistoryEntry<DistributionState>>>(() => readHistory(definition.id))
   const normalizedState = useMemo(() => normalizeDistributionState(definition, state), [definition, state])
   const result = useMemo(() => calculateDistribution(definition, normalizedState), [definition, normalizedState])
+  const statistics = useMemo(() => getDistributionStats(definition, normalizedState.params), [definition, normalizedState.params])
+  const probabilityRows = useMemo(() => getDistributionTableRows(definition, normalizedState.params), [definition, normalizedState.params])
   const queryFormula: FormulaExplanation = useMemo(
     () => ({
       latex: result.formula,
@@ -373,6 +440,24 @@ export function DistributionTool({ definition }: DistributionToolProps) {
           </section>
 
           <DistributionChart definition={definition} params={normalizedState.params} result={result} />
+
+          {statistics.length ? (
+            <section className="distribution-learning-panel" aria-label={`${definition.title} 统计特征`}>
+              <div className="learning-panel-heading">
+                <div>
+                  <h2>统计特征</h2>
+                  <p>{definition.supportLabel?.(normalizedState.params) ?? '当前分布的常用特征值。'}</p>
+                </div>
+              </div>
+              <div className="distribution-stat-grid">
+                {statistics.map((item) => (
+                  <StatisticCard key={`${item.label}-${item.value}`} item={item} />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <ProbabilityTable rows={probabilityRows} activeRange={result.barRange} />
         </div>
 
         <aside className="result-panel">

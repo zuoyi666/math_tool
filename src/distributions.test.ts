@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyDistributionQuickValue, calculateDistribution, DISTRIBUTIONS } from './distributions'
+import { applyDistributionQuickValue, calculateDistribution, DISTRIBUTIONS, getDistributionStats, getDistributionTableRows } from './distributions'
 
 describe('distribution engine', () => {
   it('calculates Student t left tail', () => {
@@ -133,5 +133,52 @@ describe('distribution engine', () => {
 
     expect(next.x).toBe(8)
     expect(next.params).toEqual({ n: 20, p: 0.2 })
+  })
+
+  it('returns binomial statistics and probability table rows', () => {
+    const stats = getDistributionStats(DISTRIBUTIONS.binomial, { n: 10, p: 0.5 })
+    const mean = stats.find((item) => item.label === '均值')
+    const variance = stats.find((item) => item.label === '方差')
+    const rows = getDistributionTableRows(DISTRIBUTIONS.binomial, { n: 10, p: 0.5 })
+
+    expect(mean?.value).toBe('5')
+    expect(variance?.value).toBe('2.5')
+    expect(rows).toHaveLength(11)
+    expect(rows[5].pmf).toBeCloseTo(0.24609375, 8)
+    expect(rows.reduce((sum, row) => sum + row.pmf, 0)).toBeCloseTo(1, 10)
+  })
+
+  it('returns Poisson statistics and right-tail table values', () => {
+    const stats = getDistributionStats(DISTRIBUTIONS.poisson, { lambda: 3 })
+    const rows = getDistributionTableRows(DISTRIBUTIONS.poisson, { lambda: 3 })
+    const k3 = rows.find((row) => row.k === 3)
+
+    expect(stats.find((item) => item.label === '均值')?.value).toBe('3')
+    expect(stats.find((item) => item.label === '方差')?.value).toBe('3')
+    expect(k3?.pmf).toBeCloseTo(0.22404, 4)
+    expect(k3?.rightTail).toBeCloseTo(0.57681, 4)
+  })
+
+  it('handles t distribution undefined and finite moments', () => {
+    const df1 = getDistributionStats(DISTRIBUTIONS.studentT, { df: 1 })
+    const df3 = getDistributionStats(DISTRIBUTIONS.studentT, { df: 3 })
+
+    expect(df1.find((item) => item.label === '均值')?.value).toBe('未定义')
+    expect(df1.find((item) => item.label === '方差')?.value).toBe('未定义')
+    expect(df3.find((item) => item.label === '方差')?.value).toBe('3')
+  })
+
+  it('returns chi-square and F distribution statistics', () => {
+    const chi = getDistributionStats(DISTRIBUTIONS.chiSquare, { df: 5 })
+    const f = getDistributionStats(DISTRIBUTIONS.f, { df1: 5, df2: 10 })
+    const undefinedF = getDistributionStats(DISTRIBUTIONS.f, { df1: 1, df2: 2 })
+
+    expect(chi.find((item) => item.label === '均值')?.value).toBe('5')
+    expect(chi.find((item) => item.label === '方差')?.value).toBe('10')
+    expect(chi.find((item) => item.label === '众数')?.value).toBe('3')
+    expect(f.find((item) => item.label === '均值')?.value).toBe('1.25')
+    expect(f.find((item) => item.label === '众数')?.value).toBe('0.5')
+    expect(undefinedF.find((item) => item.label === '均值')?.value).toBe('未定义')
+    expect(undefinedF.find((item) => item.label === '众数')?.value).toBe('不存在')
   })
 })

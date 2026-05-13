@@ -1,5 +1,14 @@
 import { jStat } from 'jstat'
-import type { DistributionDefinition, DistributionId, DistributionState, ParameterDefinition, ProbabilityResult, QueryMode } from './types'
+import type {
+  DistributionDefinition,
+  DistributionId,
+  DistributionState,
+  DistributionStatistic,
+  DistributionTableRow,
+  ParameterDefinition,
+  ProbabilityResult,
+  QueryMode,
+} from './types'
 
 export const QUERY_MODE_LABELS: Record<QueryMode, string> = {
   left: '左尾',
@@ -42,6 +51,46 @@ function formatCompact(value: number) {
     minimumFractionDigits: Math.abs(value) < 10 ? 2 : 0,
     maximumFractionDigits: Math.abs(value) < 10 ? 3 : 0,
   })
+}
+
+function formatStat(value: number, digits = 4) {
+  if (!Number.isFinite(value)) return '未定义'
+  return value.toLocaleString('zh-CN', {
+    maximumFractionDigits: digits,
+  })
+}
+
+function stat(label: string, value: number | string, latex?: string, description?: string): DistributionStatistic {
+  return {
+    label,
+    value: typeof value === 'number' ? formatStat(value) : value,
+    latex,
+    description,
+  }
+}
+
+function normalizedParams(definition: DistributionDefinition, params: Record<string, number>) {
+  return Object.fromEntries(definition.parameterDefinitions.map((item) => [item.key, param(definition.parameterDefinitions, params, item.key)]))
+}
+
+function discreteTableRows(min: number, max: number, pmf: (k: number) => number, cdf: (k: number) => number): DistributionTableRow[] {
+  return Array.from({ length: max - min + 1 }, (_, index) => {
+    const k = min + index
+    return {
+      k,
+      pmf: pmf(k),
+      cdf: clamp(cdf(k), 0, 1),
+      rightTail: clamp(1 - cdf(k - 1), 0, 1),
+    }
+  })
+}
+
+export function getDistributionStats(definition: DistributionDefinition, params: Record<string, number>) {
+  return definition.stats?.(normalizedParams(definition, params)) ?? []
+}
+
+export function getDistributionTableRows(definition: DistributionDefinition, params: Record<string, number>) {
+  return definition.tableRows?.(normalizedParams(definition, params)) ?? []
 }
 
 function parameterSummary(definition: DistributionDefinition, params: Record<string, number>) {
@@ -381,6 +430,16 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
       },
     ],
     quickValues: CONTINUOUS_QUICK,
+    supportLabel: () => '(-∞, ∞)',
+    stats: () => [
+      stat('支持域', '(-∞, ∞)', 'z\\in\\mathbb{R}', '标准正态变量可以取任意实数。'),
+      stat('均值', 0, 'E(Z)=0'),
+      stat('方差', 1, '\\operatorname{Var}(Z)=1'),
+      stat('标准差', 1, '\\sigma=1'),
+      stat('众数', 0, '\\operatorname{mode}=0'),
+      stat('偏度', 0, '\\gamma_1=0', '曲线关于 0 对称。'),
+      stat('峰度', 3, '\\beta_2=3', '正态分布的标准峰度为 3。'),
+    ],
     pdf: (x) => jStat.normal.pdf(x, 0, 1),
     cdf: (x) => jStat.normal.cdf(x, 0, 1),
     quantile: (p) => jStat.normal.inv(p, 0, 1),
@@ -439,6 +498,20 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
       { label: 'ν=10', params: { df: 10 } },
       { label: 'ν=30', params: { df: 30 } },
     ],
+    supportLabel: () => '(-∞, ∞)',
+    stats: (p) => {
+      const df = p.df
+      const variance = df > 2 ? df / (df - 2) : Number.NaN
+      return [
+        stat('支持域', '(-∞, ∞)', 't\\in\\mathbb{R}'),
+        stat('均值', df > 1 ? 0 : '未定义', '\\nu>1\\Rightarrow E(T)=0'),
+        stat('方差', df > 2 ? variance : '未定义', '\\nu>2\\Rightarrow \\operatorname{Var}(T)=\\frac{\\nu}{\\nu-2}'),
+        stat('标准差', df > 2 ? Math.sqrt(variance) : '未定义'),
+        stat('众数', 0, '\\operatorname{mode}=0'),
+        stat('偏度', df > 3 ? 0 : '未定义', '\\nu>3\\Rightarrow \\gamma_1=0'),
+        stat('超额峰度', df > 4 ? 6 / (df - 4) : '未定义', '\\nu>4\\Rightarrow \\gamma_2=\\frac{6}{\\nu-4}'),
+      ]
+    },
     pdf: (x, p) => jStat.studentt.pdf(x, p.df),
     cdf: (x, p) => jStat.studentt.cdf(x, p.df),
     quantile: (pValue, p) => jStat.studentt.inv(pValue, p.df),
@@ -497,6 +570,19 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
       { label: 'k=10', params: { df: 10 } },
       { label: 'k=30', params: { df: 30 } },
     ],
+    supportLabel: () => '[0, ∞)',
+    stats: (p) => {
+      const df = p.df
+      return [
+        stat('支持域', '[0, ∞)', 'x\\ge 0'),
+        stat('均值', df, 'E(X)=k'),
+        stat('方差', 2 * df, '\\operatorname{Var}(X)=2k'),
+        stat('标准差', Math.sqrt(2 * df), '\\sigma=\\sqrt{2k}'),
+        stat('众数', Math.max(df - 2, 0), '\\max(k-2,0)'),
+        stat('偏度', Math.sqrt(8 / df), '\\gamma_1=\\sqrt{8/k}'),
+        stat('超额峰度', 12 / df, '\\gamma_2=12/k'),
+      ]
+    },
     pdf: (x, p) => jStat.chisquare.pdf(x, p.df),
     cdf: (x, p) => jStat.chisquare.cdf(x, p.df),
     quantile: (pValue, p) => jStat.chisquare.inv(pValue, p.df),
@@ -558,6 +644,24 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
       { label: '5 / 20', params: { df1: 5, df2: 20 } },
       { label: '20 / 20', params: { df1: 20, df2: 20 } },
     ],
+    supportLabel: () => '[0, ∞)',
+    stats: (p) => {
+      const { df1, df2 } = p
+      const variance =
+        df2 > 4 ? (2 * df2 ** 2 * (df1 + df2 - 2)) / (df1 * (df2 - 2) ** 2 * (df2 - 4)) : Number.NaN
+      const mode = df1 > 2 ? ((df1 - 2) / df1) * (df2 / (df2 + 2)) : '不存在'
+      return [
+        stat('支持域', '[0, ∞)', 'x\\ge 0'),
+        stat('均值', df2 > 2 ? df2 / (df2 - 2) : '未定义', 'd_2>2\\Rightarrow E(X)=\\frac{d_2}{d_2-2}'),
+        stat(
+          '方差',
+          df2 > 4 ? variance : '未定义',
+          'd_2>4\\Rightarrow \\operatorname{Var}(X)=\\frac{2d_2^2(d_1+d_2-2)}{d_1(d_2-2)^2(d_2-4)}',
+        ),
+        stat('标准差', df2 > 4 ? Math.sqrt(variance) : '未定义'),
+        stat('众数', mode, 'd_1>2\\Rightarrow \\frac{d_1-2}{d_1}\\frac{d_2}{d_2+2}'),
+      ]
+    },
     pdf: (x, p) => jStat.centralF.pdf(x, p.df1, p.df2),
     cdf: (x, p) => jStat.centralF.cdf(x, p.df1, p.df2),
     quantile: (pValue, p) => jStat.centralF.inv(pValue, p.df1, p.df2),
@@ -622,6 +726,29 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
       { label: 'n=20, p=.2', params: { n: 20, p: 0.2 } },
       { label: 'n=50, p=.1', params: { n: 50, p: 0.1 } },
     ],
+    supportLabel: (p) => `k = 0, 1, ..., ${p.n}`,
+    stats: (p) => {
+      const { n, p: prob } = p
+      const variance = n * prob * (1 - prob)
+      const rawMode = (n + 1) * prob
+      const mode = Number.isInteger(rawMode) ? `${rawMode - 1} 和 ${rawMode}` : String(Math.floor(rawMode))
+      return [
+        stat('支持域', `0 到 ${n} 的整数`, 'k\\in\\{0,1,\\ldots,n\\}'),
+        stat('均值', n * prob, 'E(X)=np'),
+        stat('方差', variance, '\\operatorname{Var}(X)=np(1-p)'),
+        stat('标准差', Math.sqrt(variance), '\\sigma=\\sqrt{np(1-p)}'),
+        stat('众数', mode, '\\lfloor(n+1)p\\rfloor'),
+        stat('偏度', (1 - 2 * prob) / Math.sqrt(variance), '\\gamma_1=\\frac{1-2p}{\\sqrt{np(1-p)}}'),
+        stat('超额峰度', (1 - 6 * prob * (1 - prob)) / variance, '\\gamma_2=\\frac{1-6p(1-p)}{np(1-p)}'),
+      ]
+    },
+    tableRows: (p) =>
+      discreteTableRows(
+        0,
+        p.n,
+        (k) => jStat.binomial.pdf(k, p.n, p.p),
+        (k) => jStat.binomial.cdf(k, p.n, p.p),
+      ),
     pmf: (k, p) => jStat.binomial.pdf(Math.round(k), p.n, p.p),
     cdf: (k, p) => jStat.binomial.cdf(Math.floor(k), p.n, p.p),
   },
@@ -681,6 +808,29 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
       { label: 'λ=5', params: { lambda: 5 } },
       { label: 'λ=10', params: { lambda: 10 } },
     ],
+    supportLabel: () => 'k = 0, 1, 2, ...',
+    stats: (p) => {
+      const lambda = p.lambda
+      const mode = Number.isInteger(lambda) ? `${Math.max(lambda - 1, 0)} 和 ${lambda}` : String(Math.floor(lambda))
+      return [
+        stat('支持域', '非负整数', 'k\\in\\{0,1,2,\\ldots\\}'),
+        stat('均值', lambda, 'E(X)=\\lambda'),
+        stat('方差', lambda, '\\operatorname{Var}(X)=\\lambda'),
+        stat('标准差', Math.sqrt(lambda), '\\sigma=\\sqrt{\\lambda}'),
+        stat('众数', mode, '\\lfloor\\lambda\\rfloor'),
+        stat('偏度', 1 / Math.sqrt(lambda), '\\gamma_1=1/\\sqrt{\\lambda}'),
+        stat('超额峰度', 1 / lambda, '\\gamma_2=1/\\lambda'),
+      ]
+    },
+    tableRows: (p) => {
+      const upper = Math.ceil(Math.max(12, p.lambda + 5 * Math.sqrt(p.lambda)))
+      return discreteTableRows(
+        0,
+        upper,
+        (k) => jStat.poisson.pdf(k, p.lambda),
+        (k) => jStat.poisson.cdf(k, p.lambda),
+      )
+    },
     pmf: (k, p) => jStat.poisson.pdf(Math.round(k), p.lambda),
     cdf: (k, p) => jStat.poisson.cdf(Math.floor(k), p.lambda),
   },

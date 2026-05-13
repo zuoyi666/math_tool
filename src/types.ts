@@ -73,10 +73,27 @@ export interface DistributionDefinition {
   formulas: FormulaExplanation[]
   quickValues: number[]
   parameterPresets?: ParameterPreset[]
+  supportLabel?: (params: Record<string, number>) => string
+  stats?: (params: Record<string, number>) => DistributionStatistic[]
+  tableRows?: (params: Record<string, number>) => DistributionTableRow[]
   pdf?: (x: number, params: Record<string, number>) => number
   pmf?: (k: number, params: Record<string, number>) => number
   cdf: (x: number, params: Record<string, number>) => number
   quantile?: (p: number, params: Record<string, number>) => number
+}
+
+export interface DistributionStatistic {
+  label: string
+  value: string
+  latex?: string
+  description?: string
+}
+
+export interface DistributionTableRow {
+  k: number
+  pmf: number
+  cdf: number
+  rightTail: number
 }
 
 export type DistributionQueryType = 'probability' | 'critical'
