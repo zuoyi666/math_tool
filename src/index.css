@@ -693,11 +693,14 @@ button:disabled {
 
 .distribution-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 12px;
 }
 
 .distribution-stat-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -705,39 +708,68 @@ button:disabled {
   padding: 13px;
 }
 
-.distribution-stat-card span {
+.distribution-stat-card.stat-card-wide {
+  grid-column: span 2;
+}
+
+.stat-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.stat-card-header span {
   display: block;
   color: var(--muted);
   font-size: 12px;
   font-weight: 720;
 }
 
-.distribution-stat-card strong {
-  display: block;
-  margin-top: 5px;
+.stat-card-header strong {
+  display: inline-flex;
+  justify-self: end;
+  max-width: 100%;
   color: var(--primary-strong);
   font-size: 18px;
   font-weight: 780;
+  text-align: right;
   overflow-wrap: anywhere;
 }
 
 .distribution-stat-card p {
-  margin: 7px 0 0;
+  margin: 0;
   color: #64748b;
   font-size: 12px;
   line-height: 1.5;
 }
 
-.stat-formula {
-  display: block;
-  margin-top: 8px;
-  overflow-x: auto;
+.stat-formula-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: #ffffff;
   padding: 6px 8px;
+}
+
+.stat-formula-row > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.stat-formula {
+  display: block;
+  min-width: 0;
+  overflow-x: auto;
   font-family: 'Times New Roman', ui-serif, Georgia, serif;
   font-size: 14px;
+  line-height: 1.35;
   color: #334155;
   white-space: nowrap;
   scrollbar-width: thin;
@@ -1915,6 +1947,10 @@ g:focus .bar,
 
   .result-list dd {
     text-align: left;
+  }
+
+  .distribution-stat-card.stat-card-wide {
+    grid-column: auto;
   }
 }
 

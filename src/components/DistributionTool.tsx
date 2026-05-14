@@ -187,7 +187,27 @@ function FormulaItem({ title, formula }: { title: string; formula: FormulaExplan
 }
 
 function compactFormula(latex: string) {
-  return latex
+  const targetedReplacements: Array<[string, string]> = [
+    ['\\frac{1}{\\sqrt{2\\pi}}', '1/√(2π)'],
+    ['\\frac{\\nu}{\\nu-2}', 'ν/(ν-2)'],
+    ['\\frac{6}{\\nu-4}', '6/(ν-4)'],
+    ['\\frac{d_2}{d_2-2}', 'd₂/(d₂-2)'],
+    [
+      '\\frac{2d_2^2(d_1+d_2-2)}{d_1(d_2-2)^2(d_2-4)}',
+      '2d₂²(d₁+d₂-2)/(d₁(d₂-2)²(d₂-4))',
+    ],
+    ['\\frac{d_1-2}{d_1}\\frac{d_2}{d_2+2}', '(d₁-2)/d₁ × d₂/(d₂+2)'],
+    ['\\frac{1-2p}{\\sqrt{np(1-p)}}', '(1-2p)/√(np(1-p))'],
+    ['\\frac{1-6p(1-p)}{np(1-p)}', '(1-6p(1-p))/(np(1-p))'],
+    ['\\sqrt{2k}', '√(2k)'],
+    ['\\sqrt{8/k}', '√(8/k)'],
+    ['\\sqrt{np(1-p)}', '√(np(1-p))'],
+    ['\\sqrt{\\lambda}', '√(λ)'],
+  ]
+
+  const readable = targetedReplacements.reduce((text, [pattern, replacement]) => text.split(pattern).join(replacement), latex)
+
+  return readable
     .replace(/\\operatorname\{Var\}/g, 'Var')
     .replace(/\\operatorname\{mode\}/g, 'mode')
     .replace(/\\mathbb\{R\}/g, 'ℝ')
@@ -220,11 +240,22 @@ function compactFormula(latex: string) {
 }
 
 function StatisticCard({ item }: { item: DistributionStatistic }) {
+  const formulaText = item.latex ? compactFormula(item.latex) : ''
+
   return (
-    <article className="distribution-stat-card">
-      <span>{item.label}</span>
-      <strong>{item.value}</strong>
-      {item.latex ? <code className="stat-formula">{compactFormula(item.latex)}</code> : null}
+    <article className={`distribution-stat-card${formulaText.length > 44 ? ' stat-card-wide' : ''}`}>
+      <div className="stat-card-header">
+        <span>{item.label}</span>
+        <strong>{item.value}</strong>
+      </div>
+      {item.latex ? (
+        <div className="stat-formula-row">
+          <span>公式</span>
+          <code className="stat-formula" title={item.latex}>
+            {formulaText}
+          </code>
+        </div>
+      ) : null}
       {item.description ? <p>{item.description}</p> : null}
     </article>
   )
