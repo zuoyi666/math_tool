@@ -28,7 +28,7 @@ export function AboutTool() {
         <h2>本地 App 图标</h2>
         <p>运行安装命令后，会默认在桌面生成 Math Tool 本地入口，双击即可启动并打开浏览器。</p>
         <code className="inline-command">npm run app:install</code>
-        <p>首次安装可手动输入目录；直接回车会使用桌面。</p>
+        <p>首次安装可手动输入目录；直接回车会使用桌面。若双击没有打开页面，重新运行安装命令会刷新启动器。</p>
       </article>
       <article className="workspace-card learning-example-panel">
         <h2>例题学习路径</h2>

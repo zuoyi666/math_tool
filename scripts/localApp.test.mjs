@@ -7,6 +7,7 @@ import {
   createInstallPlan,
   installLocalApp,
   parseInstallArgs,
+  renderMacLauncher,
   resolveInstallDirectory,
   shouldBuildDist,
 } from './localApp.mjs'
@@ -52,6 +53,16 @@ describe('local app installer', () => {
       kind: 'macos-app',
       installedPath: '/Users/tester/Desktop/Math Tool.app',
     })
+  })
+
+  it('renders a macOS launcher that does not depend on Finder PATH', () => {
+    const launcher = renderMacLauncher('/repo/math-tool', { nodePath: '/Users/tester/.nvm/versions/node/v20/bin/node' })
+
+    expect(launcher).toContain('/Users/tester/.nvm/versions/node/v20/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin')
+    expect(launcher).toContain('/repo/math-tool/scripts/run-local-app.mjs')
+    expect(launcher).toContain('.math-tool/launcher.log')
+    expect(launcher).toContain('/Users/tester/.nvm/versions/node/v20/bin/node')
+    expect(launcher).not.toContain('/usr/bin/env npm run app:run')
   })
 
   it('chooses the default port when available', async () => {

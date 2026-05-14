@@ -54,6 +54,14 @@ npm run app:install -- --dry-run
 npm run app:stop
 ```
 
+如果 macOS 双击图标后没有打开页面，先在项目目录重新安装一次图标：
+
+```bash
+npm run app:install -- --yes
+```
+
+启动器日志保存在 `~/.math-tool/launcher.log`，本地预览服务日志保存在项目目录的 `.math-tool/preview.log`。
+
 ## GitHub 工作流
 
 仓库目标：`https://github.com/zuoyi666/math_tool`

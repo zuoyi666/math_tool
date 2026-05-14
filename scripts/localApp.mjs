@@ -130,11 +130,41 @@ export function renderMacInfoPlist() {
 `
 }
 
-export function renderMacLauncher(projectRoot) {
+export function renderMacLauncher(projectRoot, { nodePath = process.execPath } = {}) {
+  const nodeBinDir = path.dirname(nodePath)
+  const runnerPath = path.join(projectRoot, 'scripts', 'run-local-app.mjs')
+  const logPath = path.join(os.homedir(), STATE_DIR, 'launcher.log')
+  const launchPath = `${nodeBinDir}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`
+
   return `#!/bin/zsh
 set -e
-cd ${shellQuote(projectRoot)}
-/usr/bin/env npm run app:run
+export PATH=${shellQuote(launchPath)}:"$PATH"
+PROJECT_ROOT=${shellQuote(projectRoot)}
+RUNNER=${shellQuote(runnerPath)}
+LOG_FILE=${shellQuote(logPath)}
+
+mkdir -p "$(dirname "$LOG_FILE")"
+
+set +e
+{
+  echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] Launching Math Tool"
+  cd "$PROJECT_ROOT"
+  if [ -x ${shellQuote(nodePath)} ]; then
+    ${shellQuote(nodePath)} "$RUNNER"
+  elif command -v node >/dev/null 2>&1; then
+    node "$RUNNER"
+  else
+    echo "Node.js was not found. Install Node.js, then run npm run app:install again."
+    exit 127
+  fi
+} >> "$LOG_FILE" 2>&1
+STATUS=$?
+set -e
+
+if [ "$STATUS" -ne 0 ]; then
+  /usr/bin/osascript -e 'display dialog "Math Tool 启动失败。请在终端进入项目目录后运行 npm run app:install 重新安装；详细日志在 ~/.math-tool/launcher.log。" buttons {"好"} default button "好" with icon caution' >/dev/null 2>&1 || true
+  exit "$STATUS"
+fi
 `
 }
 
