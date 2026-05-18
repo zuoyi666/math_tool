@@ -3,6 +3,7 @@ import type { LucideProps } from 'lucide-react'
 
 export type ToolId =
   | 'normal'
+  | 'normalGeneral'
   | 'studentT'
   | 'chiSquare'
   | 'f'
@@ -13,9 +14,10 @@ export type ToolId =
   | 'data'
   | 'about'
 
-export type DistributionId = Extract<ToolId, 'normal' | 'studentT' | 'chiSquare' | 'f' | 'binomial' | 'poisson'>
+export type DistributionId = Extract<ToolId, 'normal' | 'normalGeneral' | 'studentT' | 'chiSquare' | 'f' | 'binomial' | 'poisson'>
 export type DistributionKind = 'continuous' | 'discrete'
 export type QueryMode = 'left' | 'right' | 'between' | 'twoTail' | 'criticalLeft' | 'criticalRight' | 'exact'
+export type ChartGuideKind = 'center' | 'spread'
 
 export interface ToolDefinition {
   id: ToolId
@@ -38,6 +40,24 @@ export interface ParameterDefinition {
 export interface ParameterPreset {
   label: string
   params: Record<string, number>
+}
+
+export interface DistributionQuickValue {
+  label: string
+  value: number
+}
+
+export type DistributionQuickValues = Array<number | DistributionQuickValue> | ((params: Record<string, number>) => Array<number | DistributionQuickValue>)
+
+export interface ChartGuide {
+  value: number
+  label: string
+  kind: ChartGuideKind
+}
+
+export interface ReferenceCurve {
+  label: string
+  pdf: (x: number) => number
 }
 
 export interface FormulaExplanation {
@@ -71,8 +91,11 @@ export interface DistributionDefinition {
   defaultState: DistributionState
   domain: (params: Record<string, number>) => [number, number]
   formulas: FormulaExplanation[]
-  quickValues: number[]
+  quickValues: DistributionQuickValues
   parameterPresets?: ParameterPreset[]
+  center?: (params: Record<string, number>) => number
+  chartGuides?: (params: Record<string, number>) => ChartGuide[]
+  referenceCurves?: (params: Record<string, number>) => ReferenceCurve[]
   supportLabel?: (params: Record<string, number>) => string
   stats?: (params: Record<string, number>) => DistributionStatistic[]
   tableRows?: (params: Record<string, number>) => DistributionTableRow[]

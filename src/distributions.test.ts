@@ -4,6 +4,7 @@ import {
   calculateDistribution,
   distributionStateFromSearch,
   DISTRIBUTIONS,
+  getDistributionQuickValues,
   getDistributionStats,
   getDistributionTableRows,
 } from './distributions'
@@ -112,6 +113,65 @@ describe('distribution engine', () => {
     expect(Number(result.primaryValue)).toBeCloseTo(1.96, 2)
   })
 
+  it('calculates general normal left tail with mu and sigma', () => {
+    const result = calculateDistribution(DISTRIBUTIONS.normalGeneral, {
+      mode: 'left',
+      params: { mu: 100, sigma: 15 },
+      x: 115,
+      a: 85,
+      b: 115,
+      p: 0.95,
+    })
+
+    expect(result.probability).toBeCloseTo(0.84134, 4)
+    expect(result.detailRows.find((row) => row.label === '标准化 z')?.value).toBe('1.00')
+  })
+
+  it('calculates general normal one-sigma interval probability', () => {
+    const result = calculateDistribution(DISTRIBUTIONS.normalGeneral, {
+      mode: 'between',
+      params: { mu: 20, sigma: 3 },
+      x: 20,
+      a: 17,
+      b: 23,
+      p: 0.95,
+    })
+
+    expect(result.probability).toBeCloseTo(0.68269, 4)
+    expect(result.detailRows.find((row) => row.label === 'z_a')?.value).toBe('-1.00')
+    expect(result.detailRows.find((row) => row.label === 'z_b')?.value).toBe('1.00')
+  })
+
+  it('calculates general normal critical values with original scale output', () => {
+    const result = calculateDistribution(DISTRIBUTIONS.normalGeneral, {
+      mode: 'criticalLeft',
+      params: { mu: 100, sigma: 15 },
+      x: 100,
+      a: 85,
+      b: 115,
+      p: 0.975,
+    })
+
+    expect(result.queryType).toBe('critical')
+    expect(Number(result.primaryValue)).toBeCloseTo(129.4, 1)
+    expect(Number(result.detailRows.find((row) => row.label === '标准正态 z')?.value)).toBeCloseTo(1.96, 2)
+  })
+
+  it('uses distribution center for continuous two-tail calculations', () => {
+    const result = calculateDistribution(DISTRIBUTIONS.normalGeneral, {
+      mode: 'twoTail',
+      params: { mu: 10, sigma: 2 },
+      x: 12,
+      a: 8,
+      b: 12,
+      p: 0.95,
+    })
+
+    expect(result.probability).toBeCloseTo(0.31731, 4)
+    expect(result.markers).toEqual([8, 12])
+    expect(result.detailRows.find((row) => row.label === '|z|')?.value).toBe('1.00')
+  })
+
   it('shows continuous critical values instead of probabilities', () => {
     for (const distribution of [DISTRIBUTIONS.studentT, DISTRIBUTIONS.chiSquare, DISTRIBUTIONS.f]) {
       const result = calculateDistribution(distribution, {
@@ -189,11 +249,31 @@ describe('distribution engine', () => {
     expect(undefinedF.find((item) => item.label === '众数')?.value).toBe('不存在')
   })
 
+  it('returns general normal statistics and parameter-aware quick values', () => {
+    const stats = getDistributionStats(DISTRIBUTIONS.normalGeneral, { mu: 100, sigma: 15 })
+    const quickValues = getDistributionQuickValues(DISTRIBUTIONS.normalGeneral, { mu: 100, sigma: 15 })
+
+    expect(stats.find((item) => item.label === '均值')?.value).toBe('100')
+    expect(stats.find((item) => item.label === '方差')?.value).toBe('225')
+    expect(stats.find((item) => item.label === '标准差')?.value).toBe('15')
+    expect(stats.find((item) => item.label === '众数')?.value).toBe('100')
+    expect(quickValues.find((item) => item.label === 'μ+σ')?.value).toBe(115)
+  })
+
   it('initializes distribution state from hash query parameters', () => {
     const state = distributionStateFromSearch(DISTRIBUTIONS.poisson, '?lambda=3&mode=left&x=3')
 
     expect(state.mode).toBe('left')
     expect(state.params.lambda).toBe(3)
     expect(state.x).toBe(3)
+  })
+
+  it('initializes general normal state from hash query parameters', () => {
+    const state = distributionStateFromSearch(DISTRIBUTIONS.normalGeneral, '?mu=100&sigma=15&mode=left&x=115')
+
+    expect(state.mode).toBe('left')
+    expect(state.params.mu).toBe(100)
+    expect(state.params.sigma).toBe(15)
+    expect(state.x).toBe(115)
   })
 })

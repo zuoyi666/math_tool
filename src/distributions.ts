@@ -2,6 +2,7 @@ import { jStat } from 'jstat'
 import type {
   DistributionDefinition,
   DistributionId,
+  DistributionQuickValue,
   DistributionState,
   DistributionStatistic,
   DistributionTableRow,
@@ -23,6 +24,12 @@ export const QUERY_MODE_LABELS: Record<QueryMode, string> = {
 const CONTINUOUS_QUICK = [-2.58, -1.96, -1.645, -1.28, -0.84, 0, 0.84, 1.28, 1.645, 1.96, 2.58]
 const POSITIVE_QUICK = [0.5, 1, 2, 3, 5, 8, 10, 12, 15]
 const DISCRETE_QUICK = [0, 1, 2, 3, 4, 5, 8, 10, 12]
+
+function normalGeneralDomain(params: Record<string, number>): [number, number] {
+  const mu = params.mu ?? 0
+  const sigma = Math.max(params.sigma ?? 1, 0.1)
+  return [Math.min(mu - 4 * sigma, -4), Math.max(mu + 4 * sigma, 4)]
+}
 
 function clamp(value: number, min: number, max: number) {
   if (!Number.isFinite(value)) return min
@@ -49,7 +56,7 @@ function formatCompact(value: number) {
   if (!Number.isFinite(value)) return '无效'
   return value.toLocaleString('zh-CN', {
     minimumFractionDigits: Math.abs(value) < 10 ? 2 : 0,
-    maximumFractionDigits: Math.abs(value) < 10 ? 3 : 0,
+    maximumFractionDigits: 3,
   })
 }
 
@@ -93,6 +100,12 @@ export function getDistributionTableRows(definition: DistributionDefinition, par
   return definition.tableRows?.(normalizedParams(definition, params)) ?? []
 }
 
+export function getDistributionQuickValues(definition: DistributionDefinition, params: Record<string, number>): DistributionQuickValue[] {
+  const normalized = normalizedParams(definition, params)
+  const values = typeof definition.quickValues === 'function' ? definition.quickValues(normalized) : definition.quickValues
+  return values.map((item) => (typeof item === 'number' ? { label: formatCompact(item), value: item } : item))
+}
+
 function parameterSummary(definition: DistributionDefinition, params: Record<string, number>) {
   return definition.parameterDefinitions.map((item) => `${item.label} = ${formatCompact(param(definition.parameterDefinitions, params, item.key))}`).join(', ')
 }
@@ -107,6 +120,17 @@ function paramsOrDefault(paramsText: string) {
 
 function probabilityInterpretation(definition: DistributionDefinition, label: string, probability: number, mode: QueryMode) {
   const percent = formatNumber(probability * 100, 2)
+  if (definition.id === 'normalGeneral') {
+    const context =
+      mode === 'left'
+        ? '先把 x 标准化为 z=(x-μ)/σ，再查标准正态左侧面积。'
+        : mode === 'right'
+          ? '右尾表示超过当前 x 的概率；μ 控制曲线位置，σ 控制曲线宽窄。'
+          : mode === 'between'
+            ? '区间概率等于两个端点标准化后对应标准正态累计概率之差。'
+            : '双尾围绕均值 μ 对称计算，表示离均值至少同样远的两端概率。'
+    return `${definition.title} 下，${label} 的概率约为 ${percent}%。${context}`
+  }
   const context =
     mode === 'left'
       ? '左尾表示不超过该取值的累计概率，常用于查累计分布表。'
@@ -122,6 +146,9 @@ function probabilityInterpretation(definition: DistributionDefinition, label: st
 
 function criticalInterpretation(definition: DistributionDefinition, label: string, critical: number, probability: number, mode: QueryMode) {
   const direction = mode === 'criticalRight' ? '右尾面积' : '左尾累计概率'
+  if (definition.id === 'normalGeneral') {
+    return `${definition.title} 下，当${direction}为 ${formatCompact(probability)} 时，先在标准正态中查 z，再用 x=μ+zσ 换算，临界值约为 ${formatCompact(critical)}。${label}`
+  }
   return `${definition.title} 下，当${direction}为 ${formatCompact(probability)} 时，临界值约为 ${formatCompact(critical)}。考试或检验中可把它作为拒绝域边界：观测值越过该边界时进入对应尾部区域。${label}`
 }
 
@@ -139,12 +166,14 @@ function discreteUpper(definition: DistributionDefinition, params: Record<string
 
 function continuousArgument(definition: DistributionDefinition) {
   if (definition.id === 'normal') return 'z'
+  if (definition.id === 'normalGeneral') return 'x'
   if (definition.id === 'studentT') return 't'
   return 'x'
 }
 
 function cdfLatex(definition: DistributionDefinition, argument: string) {
   if (definition.id === 'normal') return `\\Phi(${argument})`
+  if (definition.id === 'normalGeneral') return argument === 'x' ? '\\Phi\\left(\\frac{x-\\mu}{\\sigma}\\right)' : `\\Phi\\left(\\frac{${argument}-\\mu}{\\sigma}\\right)`
   if (definition.id === 'studentT') return `F_t(${argument})`
   if (definition.id === 'chiSquare') return `F_{\\chi^2}(${argument})`
   if (definition.id === 'f') return `F_F(${argument})`
@@ -153,10 +182,40 @@ function cdfLatex(definition: DistributionDefinition, argument: string) {
 
 function inverseCdfLatex(definition: DistributionDefinition, argument: string) {
   if (definition.id === 'normal') return `\\Phi^{-1}(${argument})`
+  if (definition.id === 'normalGeneral') return `\\mu+\\sigma\\Phi^{-1}(${argument})`
   if (definition.id === 'studentT') return `F_t^{-1}(${argument})`
   if (definition.id === 'chiSquare') return `F_{\\chi^2}^{-1}(${argument})`
   if (definition.id === 'f') return `F_F^{-1}(${argument})`
   return `F^{-1}(${argument})`
+}
+
+function distributionCenter(definition: DistributionDefinition, params: Record<string, number>) {
+  return definition.center?.(params) ?? 0
+}
+
+function standardizeNormalGeneral(value: number, params: Record<string, number>) {
+  return (value - params.mu) / params.sigma
+}
+
+function normalGeneralRows(definition: DistributionDefinition, params: Record<string, number>, mode: QueryMode, x: number, a: number, b: number) {
+  if (definition.id !== 'normalGeneral') return []
+  if (mode === 'between') {
+    return [
+      { label: 'z_a', value: formatCompact(standardizeNormalGeneral(a, params)) },
+      { label: 'z_b', value: formatCompact(standardizeNormalGeneral(b, params)) },
+    ]
+  }
+  if (mode === 'twoTail') {
+    return [{ label: '|z|', value: formatCompact(Math.abs(standardizeNormalGeneral(x, params))) }]
+  }
+  return [{ label: '标准化 z', value: formatCompact(standardizeNormalGeneral(x, params)) }]
+}
+
+function withRowsBeforeParams(rows: ProbabilityResult['detailRows'], extraRows: ProbabilityResult['detailRows']) {
+  if (!extraRows.length) return rows
+  const paramsIndex = rows.findIndex((row) => row.label === '参数')
+  if (paramsIndex < 0) return [...rows, ...extraRows]
+  return [...rows.slice(0, paramsIndex), ...extraRows, ...rows.slice(paramsIndex)]
 }
 
 export function normalizeDistributionState(definition: DistributionDefinition, state: DistributionState): DistributionState {
@@ -221,10 +280,12 @@ export function distributionStateFromHash(definition: DistributionDefinition, ha
 
 export function applyDistributionQuickValue(definition: DistributionDefinition, state: DistributionState, value: number): DistributionState {
   if (state.mode === 'between') {
+    const center = definition.kind === 'discrete' ? 0 : distributionCenter(definition, normalizedParams(definition, state.params))
+    const distance = Math.abs(value - center)
     return {
       ...state,
-      a: definition.kind === 'discrete' ? Math.max(0, Math.round(value - 1)) : -Math.abs(value),
-      b: definition.kind === 'discrete' ? Math.round(value) : Math.abs(value),
+      a: definition.kind === 'discrete' ? Math.max(0, Math.round(value - 1)) : center - distance,
+      b: definition.kind === 'discrete' ? Math.round(value) : center + distance,
     }
   }
   return { ...state, x: value }
@@ -301,6 +362,7 @@ export function calculateDistribution(definition: DistributionDefinition, state:
   const x = normalized.x
   const a = Math.min(normalized.a, normalized.b)
   const b = Math.max(normalized.a, normalized.b)
+  const center = distributionCenter(definition, params)
   const symbolicX = continuousArgument(definition)
   const cdfX = safeCdf(definition, x, params)
   const density = definition.pdf?.(x, params) ?? 0
@@ -331,16 +393,24 @@ export function calculateDistribution(definition: DistributionDefinition, state:
     xSummary = `a = ${formatCompact(a)}, b = ${formatCompact(b)}`
     interpretation = probabilityInterpretation(definition, label, probability, mode)
   } else if (mode === 'twoTail') {
-    const absX = Math.abs(x)
-    probability = 2 * (1 - safeCdf(definition, absX, params))
-    label = `P(|${variable}| ≥ ${formatCompact(absX)})`
-    formula = `2\\left(1-${cdfLatex(definition, `|${symbolicX}|`)}\\right)`
-    markers = [-absX, absX]
+    const distance = Math.abs(x - center)
+    const lower = center - distance
+    const upper = center + distance
+    probability = safeCdf(definition, lower, params) + (1 - safeCdf(definition, upper, params))
+    label =
+      definition.id === 'normalGeneral'
+        ? `P(|${variable}-μ| ≥ ${formatCompact(distance)})`
+        : `P(|${variable}| ≥ ${formatCompact(distance)})`
+    formula =
+      definition.id === 'normalGeneral'
+        ? `2\\left(1-\\Phi\\left(\\frac{|x-\\mu|}{\\sigma}\\right)\\right)`
+        : `2\\left(1-${cdfLatex(definition, `|${symbolicX}|`)}\\right)`
+    markers = [lower, upper]
     shadeRanges = [
-      [domainMin, -absX],
-      [absX, domainMax],
+      [domainMin, lower],
+      [upper, domainMax],
     ]
-    xSummary = `|x| = ${formatCompact(absX)}`
+    xSummary = definition.id === 'normalGeneral' ? `μ = ${formatCompact(center)}, |x-μ| = ${formatCompact(distance)}` : `|x| = ${formatCompact(distance)}`
     interpretation = probabilityInterpretation(definition, label, probability, mode)
   } else if (mode === 'criticalLeft' && definition.quantile) {
     const critical = definition.quantile(normalized.p, params)
@@ -362,6 +432,12 @@ export function calculateDistribution(definition: DistributionDefinition, state:
       { label: 'PDF(临界值)', value: formatNumber(definition.pdf?.(critical, params) ?? 0, 6) },
       { label: '参数', value: paramsOrDefault(paramsText) },
     ]
+    if (definition.id === 'normalGeneral') {
+      detailRows = withRowsBeforeParams(detailRows, [
+        { label: '标准正态 z', value: formatCompact(standardizeNormalGeneral(critical, params)) },
+        { label: '换算 x', value: `μ + zσ = ${formatCompact(critical)}` },
+      ])
+    }
   } else if (mode === 'criticalRight' && definition.quantile) {
     const critical = definition.quantile(1 - normalized.p, params)
     probability = normalized.p
@@ -382,18 +458,24 @@ export function calculateDistribution(definition: DistributionDefinition, state:
       { label: 'PDF(临界值)', value: formatNumber(definition.pdf?.(critical, params) ?? 0, 6) },
       { label: '参数', value: paramsOrDefault(paramsText) },
     ]
+    if (definition.id === 'normalGeneral') {
+      detailRows = withRowsBeforeParams(detailRows, [
+        { label: '标准正态 z', value: formatCompact(standardizeNormalGeneral(critical, params)) },
+        { label: '换算 x', value: `μ + zσ = ${formatCompact(critical)}` },
+      ])
+    }
   }
 
   probability = clamp(probability, 0, 1)
   if (queryType === 'probability') {
     primaryValue = formatNumber(probability, 6)
-    detailRows = [
+    detailRows = withRowsBeforeParams([
       { label: '概率', value: formatNumber(probability, 6) },
       { label: '百分比', value: `${formatNumber(probability * 100, 2)}%` },
       { label: 'CDF(x)', value: formatNumber(cdfX, 6) },
       { label: 'PDF(x)', value: formatNumber(density, 6) },
       { label: '参数', value: paramsOrDefault(paramsText) },
-    ]
+    ], normalGeneralRows(definition, params, mode, x, a, b))
   }
   const finalDetailRows = detailRows ?? [
     { label: primaryLabel, value: primaryValue },
@@ -484,6 +566,110 @@ export const DISTRIBUTIONS: Record<DistributionId, DistributionDefinition> = {
     pdf: (x) => jStat.normal.pdf(x, 0, 1),
     cdf: (x) => jStat.normal.cdf(x, 0, 1),
     quantile: (p) => jStat.normal.inv(p, 0, 1),
+  },
+  normalGeneral: {
+    id: 'normalGeneral',
+    kind: 'continuous',
+    title: '正态分布',
+    subtitle: '观察 X ~ N(μ, σ²) 中均值 μ 和标准差 σ 对曲线的影响',
+    variable: 'X',
+    parameterDefinitions: [
+      { key: 'mu', label: '均值 μ', min: -200, max: 200, step: 0.1, defaultValue: 0, description: '控制曲线中心位置' },
+      { key: 'sigma', label: '标准差 σ', min: 0.1, max: 100, step: 0.05, defaultValue: 1, description: '控制曲线宽窄和峰高' },
+    ],
+    modes: ['left', 'right', 'between', 'twoTail', 'criticalLeft', 'criticalRight'],
+    defaultState: { mode: 'left', params: { mu: 0, sigma: 1 }, x: 0, a: -1, b: 1, p: 0.95 },
+    domain: normalGeneralDomain,
+    formulas: [
+      {
+        latex: 'X \\sim N(\\mu,\\sigma^2)',
+        description: '一般正态分布由均值 μ 和标准差 σ 决定；μ 改变曲线位置，σ 改变曲线离散程度。',
+        terms: [
+          { symbol: 'X', meaning: '服从一般正态分布的随机变量。' },
+          { symbol: '\\mu', meaning: '均值，也就是钟形曲线的中心位置。' },
+          { symbol: '\\sigma', meaning: '标准差，数值越大曲线越宽越矮。' },
+        ],
+        example: {
+          question: '考试分数大致服从 N(70,10²)，均值和标准差分别是什么？',
+          solution: 'μ=70 表示中心在 70 分，σ=10 表示多数分数大约落在 70 分附近 10 分以内。',
+        },
+      },
+      {
+        latex: 'f(x)=\\frac{1}{\\sigma\\sqrt{2\\pi}}e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}',
+        description: '正态分布密度函数。某点高度不是概率，曲线下的面积才是概率。',
+        terms: [
+          { symbol: 'f(x)', meaning: 'x 点处的概率密度高度。' },
+          { symbol: 'x-\\mu', meaning: '当前取值距离均值的偏差。' },
+          { symbol: '\\sigma^2', meaning: '方差，等于标准差的平方。' },
+        ],
+        example: {
+          question: '保持 μ 不变，把 σ 从 1 调到 3 会发生什么？',
+          solution: '曲线会变宽且峰值降低，因为概率被分散到更大的取值范围中。',
+        },
+      },
+      {
+        latex: 'z=\\frac{x-\\mu}{\\sigma}',
+        description: '标准化公式，把一般正态变量转换为标准正态 z 分数。',
+        terms: [
+          { symbol: 'z', meaning: '标准化后的相对位置，单位是标准差。' },
+          { symbol: 'x', meaning: '原始取值。' },
+        ],
+        example: {
+          question: 'X~N(100,15²)，x=115 对应什么 z 分数？',
+          solution: 'z=(115-100)/15=1，表示比均值高 1 个标准差。',
+          latex: 'z=\\frac{115-100}{15}=1',
+        },
+      },
+      {
+        latex: 'P(X\\le x)=\\Phi\\left(\\frac{x-\\mu}{\\sigma}\\right)',
+        description: '一般正态的左尾概率可以通过标准化后查标准正态累计分布函数得到。',
+        terms: [
+          { symbol: '\\Phi', meaning: '标准正态累计分布函数。' },
+          { symbol: 'P(X\\le x)', meaning: 'X 不超过 x 的概率，也就是左侧面积。' },
+        ],
+        example: {
+          question: 'X~N(100,15²)，求 P(X≤115)。',
+          solution: '先标准化得到 z=1，再查 Φ(1)，概率约为 0.8413。',
+        },
+      },
+    ],
+    quickValues: (p) => {
+      const { mu, sigma } = p
+      return [
+        { label: 'μ-2σ', value: mu - 2 * sigma },
+        { label: 'μ-σ', value: mu - sigma },
+        { label: 'μ', value: mu },
+        { label: 'μ+σ', value: mu + sigma },
+        { label: 'μ+1.96σ', value: mu + 1.96 * sigma },
+        { label: 'μ+2σ', value: mu + 2 * sigma },
+      ]
+    },
+    parameterPresets: [
+      { label: '标准 N(0,1)', params: { mu: 0, sigma: 1 } },
+      { label: '考试 N(100,15)', params: { mu: 100, sigma: 15 } },
+      { label: '成绩 N(70,10)', params: { mu: 70, sigma: 10 } },
+      { label: '紧密 N(0,0.5)', params: { mu: 0, sigma: 0.5 } },
+    ],
+    supportLabel: () => '(-∞, ∞)',
+    center: (p) => p.mu,
+    chartGuides: (p) => [
+      { value: p.mu, label: `μ=${formatCompact(p.mu)}`, kind: 'center' },
+      { value: p.mu - p.sigma, label: `μ-σ=${formatCompact(p.mu - p.sigma)}`, kind: 'spread' },
+      { value: p.mu + p.sigma, label: `μ+σ=${formatCompact(p.mu + p.sigma)}`, kind: 'spread' },
+    ],
+    referenceCurves: () => [{ label: '参考 N(0,1)', pdf: (x) => jStat.normal.pdf(x, 0, 1) }],
+    stats: (p) => [
+      stat('支持域', '(-∞, ∞)', 'x\\in\\mathbb{R}', '正态变量可以取任意实数。'),
+      stat('均值', p.mu, 'E(X)=\\mu', 'μ 决定曲线中心，改变 μ 会让曲线左右平移。'),
+      stat('方差', p.sigma ** 2, '\\operatorname{Var}(X)=\\sigma^2'),
+      stat('标准差', p.sigma, '\\sigma', 'σ 越大，曲线越宽越矮；σ 越小，曲线越窄越高。'),
+      stat('众数', p.mu, '\\operatorname{mode}=\\mu'),
+      stat('偏度', 0, '\\gamma_1=0', '正态曲线关于均值 μ 对称。'),
+      stat('峰度', 3, '\\beta_2=3', '正态分布的标准峰度为 3。'),
+    ],
+    pdf: (x, p) => jStat.normal.pdf(x, p.mu, p.sigma),
+    cdf: (x, p) => jStat.normal.cdf(x, p.mu, p.sigma),
+    quantile: (pValue, p) => jStat.normal.inv(pValue, p.mu, p.sigma),
   },
   studentT: {
     id: 'studentT',

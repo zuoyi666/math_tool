@@ -569,6 +569,24 @@ button:disabled {
   font-weight: 720;
 }
 
+.chart-data-chip.reference-chip {
+  border-color: rgba(71, 85, 105, 0.22);
+  color: #475569;
+  background: #f8fafc;
+}
+
+.chart-data-chip.guide-chip.center {
+  border-color: rgba(245, 113, 20, 0.22);
+  color: #c2410c;
+  background: #fff7ed;
+}
+
+.chart-data-chip.guide-chip.spread {
+  border-color: rgba(37, 99, 235, 0.2);
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
 .legend-swatch {
   width: 30px;
   height: 14px;
@@ -598,6 +616,32 @@ button:disabled {
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.reference-curve-line {
+  fill: none;
+  stroke: #94a3b8;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 7 7;
+  opacity: 0.85;
+}
+
+.chart-guide-line {
+  stroke-width: 1.6;
+  stroke-dasharray: 5 6;
+  opacity: 0.72;
+}
+
+.chart-guide-line.center {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: none;
+}
+
+.chart-guide-line.spread {
+  stroke: #2563eb;
 }
 
 .zero-line {
@@ -668,6 +712,26 @@ button:disabled {
   border-radius: var(--radius);
   background: var(--surface-soft);
   padding: 16px;
+}
+
+.learning-cta-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.learning-cta-panel h2 {
+  margin: 0 0 5px;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.learning-cta-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .learning-panel-heading {
@@ -1947,6 +2011,11 @@ g:focus .bar,
 
   .result-list dd {
     text-align: left;
+  }
+
+  .learning-cta-panel {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .distribution-stat-card.stat-card-wide {

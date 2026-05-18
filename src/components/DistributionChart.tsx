@@ -36,7 +36,11 @@ function formatChartProbability(value: number) {
 }
 
 function safeDensity(definition: DistributionDefinition, params: Record<string, number>, x: number) {
-  const value = definition.pdf?.(x, params) ?? 0
+  return safePdfValue((value) => definition.pdf?.(value, params) ?? 0, x)
+}
+
+function safePdfValue(pdf: (x: number) => number, x: number) {
+  const value = pdf(x)
   return Number.isFinite(value) && value > 0 ? value : 0
 }
 
@@ -45,15 +49,20 @@ function pixelPoints(points: ReadonlyArray<SamplePoint>, min: number, max: numbe
 }
 
 function estimateMaxY(definition: DistributionDefinition, params: Record<string, number>, min: number, max: number) {
+  const referenceCurves = definition.referenceCurves?.(params) ?? []
   const sampleValues = Array.from({ length: SAMPLE_COUNT + 1 }, (_, index) => {
     const x = min + ((max - min) * index) / SAMPLE_COUNT
-    return safeDensity(definition, params, x)
+    return Math.max(safeDensity(definition, params, x), ...referenceCurves.map((curve) => safePdfValue(curve.pdf, x)))
   })
   return Math.max(...sampleValues, 0.01)
 }
 
 function continuousPath(definition: DistributionDefinition, params: Record<string, number>, min: number, max: number, maxY: number) {
-  const rawPoints = adaptiveSampleRange(min, max, (x) => safeDensity(definition, params, x), {
+  return continuousPdfPath((x) => safeDensity(definition, params, x), min, max, maxY)
+}
+
+function continuousPdfPath(pdf: (x: number) => number, min: number, max: number, maxY: number) {
+  const rawPoints = adaptiveSampleRange(min, max, (x) => safePdfValue(pdf, x), {
     initialSegments: 72,
     maxDepth: 6,
     scale: maxY,
@@ -149,6 +158,8 @@ export function DistributionChart({ definition, params, result }: DistributionCh
   }
 
   const maxY = estimateMaxY(definition, params, domainMin, domainMax)
+  const referenceCurves = definition.referenceCurves?.(params) ?? []
+  const chartGuides = definition.chartGuides?.(params).filter((guide) => guide.value >= domainMin && guide.value <= domainMax) ?? []
 
   return (
     <section className="chart-panel" aria-label={`${definition.title} 曲线图`}>
@@ -156,6 +167,16 @@ export function DistributionChart({ definition, params, result }: DistributionCh
         <span className="legend-swatch" />
         <span>{result.label}</span>
         {result.chartAnnotations?.shadeLabel ? <span className="chart-legend-detail">{result.chartAnnotations.shadeLabel}</span> : null}
+        {referenceCurves.map((curve) => (
+          <span key={curve.label} className="chart-data-chip reference-chip">
+            {curve.label}
+          </span>
+        ))}
+        {chartGuides.map((guide) => (
+          <span key={`${guide.kind}-${guide.value}`} className={`chart-data-chip guide-chip ${guide.kind}`}>
+            {guide.label}
+          </span>
+        ))}
         {result.chartAnnotations?.markerLabels?.map((label, index) => (
           <span key={`${label}-${index}`} className="chart-data-chip">
             {label}
@@ -172,6 +193,9 @@ export function DistributionChart({ definition, params, result }: DistributionCh
         {result.shadeRanges.map(([from, to], index) => (
           <path key={`${from}-${to}-${index}`} d={continuousShade(definition, params, domainMin, domainMax, maxY, from, to)} fill={`url(#areaFill-${definition.id})`} />
         ))}
+        {referenceCurves.map((curve) => (
+          <path key={curve.label} d={continuousPdfPath(curve.pdf, domainMin, domainMax, maxY)} className="reference-curve-line" />
+        ))}
         <path d={continuousPath(definition, params, domainMin, domainMax, maxY)} className="curve-line" />
         <line x1={PAD_X} x2={WIDTH - PAD_X} y1={BASELINE} y2={BASELINE} className="chart-axis" />
         {Array.from({ length: 9 }, (_, index) => domainMin + ((domainMax - domainMin) * index) / 8).map((tick, index) => (
@@ -181,6 +205,16 @@ export function DistributionChart({ definition, params, result }: DistributionCh
               {tick.toLocaleString('zh-CN', { maximumFractionDigits: 1 })}
             </text>
           </g>
+        ))}
+        {chartGuides.map((guide) => (
+          <line
+            key={`guide-${guide.kind}-${guide.value}`}
+            x1={xScale(guide.value, domainMin, domainMax)}
+            x2={xScale(guide.value, domainMin, domainMax)}
+            y1={TOP}
+            y2={BASELINE}
+            className={`chart-guide-line ${guide.kind}`}
+          />
         ))}
         {result.markers.map((marker, index) => {
           return (

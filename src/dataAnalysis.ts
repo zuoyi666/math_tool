@@ -88,6 +88,17 @@ function buildDistributionSuggestions(summaries: NumericColumnSummary[], valuesB
         href: `#/poisson?lambda=${queryNumber(lambda)}&mode=left&x=${Math.max(0, Math.round(summary.mean))}`,
       })
     }
+
+    if (summary.count >= 2 && summary.stdDev > 0) {
+      suggestions.push({
+        column: summary.name,
+        distributionId: 'normalGeneral',
+        label: '正态分布建模',
+        params: { mu: summary.mean, sigma: summary.stdDev },
+        reason: `${summary.name} 是数值列，可先用样本均值 μ=${queryNumber(summary.mean)}、样本标准差 σ=${queryNumber(summary.stdDev)} 观察正态近似。`,
+        href: `#/normalGeneral?mu=${queryNumber(summary.mean)}&sigma=${queryNumber(summary.stdDev)}&mode=left&x=${queryNumber(summary.mean)}`,
+      })
+    }
   }
 
   return suggestions

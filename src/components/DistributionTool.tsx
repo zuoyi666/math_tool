@@ -7,6 +7,7 @@ import {
   formatProbability,
   getDistributionStats,
   getDistributionTableRows,
+  getDistributionQuickValues,
   normalizeDistributionState,
   QUERY_MODE_LABELS,
 } from '../distributions'
@@ -216,6 +217,7 @@ function compactFormula(latex: string) {
     .replace(/\\gamma_1/g, 'γ₁')
     .replace(/\\gamma_2/g, 'γ₂')
     .replace(/\\beta_2/g, 'β₂')
+    .replace(/\\mu/g, 'μ')
     .replace(/\\lambda/g, 'λ')
     .replace(/\\nu/g, 'ν')
     .replace(/\\in/g, '∈')
@@ -359,6 +361,7 @@ export function DistributionTool({ definition }: DistributionToolProps) {
   const result = useMemo(() => calculateDistribution(definition, normalizedState), [definition, normalizedState])
   const statistics = useMemo(() => getDistributionStats(definition, normalizedState.params), [definition, normalizedState.params])
   const probabilityRows = useMemo(() => getDistributionTableRows(definition, normalizedState.params), [definition, normalizedState.params])
+  const quickValues = useMemo(() => getDistributionQuickValues(definition, normalizedState.params), [definition, normalizedState.params])
   const queryFormula: FormulaExplanation = useMemo(
     () => ({
       latex: result.formula,
@@ -500,14 +503,15 @@ export function DistributionTool({ definition }: DistributionToolProps) {
                   <small>只改变查询值</small>
                 </div>
                 <div className="quick-grid">
-                  {definition.quickValues.map((value) => (
+                  {quickValues.map((item) => (
                     <button
-                      key={value}
+                      key={`${item.label}-${item.value}`}
                       type="button"
-                      className={normalizedState.mode !== 'between' && normalizedState.x === value ? 'selected' : ''}
-                      onClick={() => setState((current) => applyDistributionQuickValue(definition, current, value))}
+                      className={normalizedState.mode !== 'between' && Math.abs(normalizedState.x - item.value) < 1e-9 ? 'selected' : ''}
+                      title={`${item.label} = ${item.value.toLocaleString('zh-CN', { maximumFractionDigits: 4 })}`}
+                      onClick={() => setState((current) => applyDistributionQuickValue(definition, current, item.value))}
                     >
-                      {value}
+                      {item.label}
                     </button>
                   ))}
                 </div>
@@ -516,6 +520,18 @@ export function DistributionTool({ definition }: DistributionToolProps) {
           </section>
 
           <DistributionChart definition={definition} params={normalizedState.params} result={result} />
+
+          {definition.id === 'normal' ? (
+            <section className="distribution-learning-panel learning-cta-panel" aria-label="正态分布参数影响入口">
+              <div>
+                <h2>想观察 μ 和 σ 的影响？</h2>
+                <p>标准正态固定为 μ=0、σ=1；如果要拖动均值和标准差观察曲线平移、变宽或变窄，请进入一般正态分布工具。</p>
+              </div>
+              <a className="ghost-button" href="#/normalGeneral">
+                打开正态分布
+              </a>
+            </section>
+          ) : null}
 
           {statistics.length ? (
             <section className="distribution-learning-panel" aria-label={`${definition.title} 统计特征`}>

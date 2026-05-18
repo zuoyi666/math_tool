@@ -40,4 +40,17 @@ describe('data analysis', () => {
       href: '#/binomial?n=1&p=0.6&mode=exact&x=1',
     })
   })
+
+  it('suggests general normal modeling for numeric columns', () => {
+    const summary = analyzeCsv('score\n82.5\n91\n76.5\n88')
+    const suggestion = summary.distributionSuggestions.find((item) => item.distributionId === 'normalGeneral')
+
+    expect(suggestion).toMatchObject({
+      column: 'score',
+      distributionId: 'normalGeneral',
+      label: '正态分布建模',
+    })
+    expect(suggestion?.href).toContain('#/normalGeneral?mu=')
+    expect(suggestion?.href).toContain('&sigma=')
+  })
 })

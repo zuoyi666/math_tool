@@ -11,6 +11,7 @@ import type { ToolDefinition, ToolId } from './types'
 
 export const TOOL_REGISTRY: ToolDefinition[] = [
   { id: 'normal', label: '标准正态分布', description: 'Z ~ N(0,1) 概率与临界值', icon: ChartArea },
+  { id: 'normalGeneral', label: '正态分布', description: 'X ~ N(μ, σ²) 参数影响与概率查询', icon: ChartArea },
   { id: 'studentT', label: 't 分布', description: 'Student t 分布查询', icon: FunctionSquare },
   { id: 'chiSquare', label: '卡方分布', description: 'χ² 分布查询', icon: FunctionSquare },
   { id: 'f', label: 'F 分布', description: 'F 分布查询', icon: FunctionSquare },
