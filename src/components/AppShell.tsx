@@ -2,7 +2,7 @@ import { CircleHelp, ExternalLink, Keyboard, Menu, Settings, Sigma } from 'lucid
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { GITHUB_REPO_LABEL, GITHUB_REPO_URL } from '../projectLinks'
-import { TOOL_REGISTRY } from '../toolRegistry'
+import { DEFAULT_TOOL_ID, TOOL_REGISTRY } from '../toolRegistry'
 import type { ToolDefinition, ToolId } from '../types'
 
 interface AppShellProps {
@@ -36,7 +36,7 @@ export function AppShell({ activeTool, tool, children }: AppShellProps) {
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="数学工具导航">
-        <a className="brand" href="#/normal" aria-label="Math Tool 首页">
+        <a className="brand" href={`#/${DEFAULT_TOOL_ID}`} aria-label="Math Tool 首页">
           <Sigma size={32} aria-hidden="true" />
           <span>Math Tool</span>
         </a>
