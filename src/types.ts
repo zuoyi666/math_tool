@@ -10,6 +10,7 @@ export type ToolId =
   | 'binomial'
   | 'poisson'
   | 'calculator'
+  | 'formulaEditor'
   | 'formulas'
   | 'data'
   | 'about'
@@ -182,6 +183,18 @@ export interface CalculatorState {
 }
 
 export type CalculatorHistoryEntry = HistoryEntry<{ expression: string; angleMode?: AngleMode }>
+
+export type FormulaTemplateGroup = 'basic' | 'calculus' | 'linearAlgebra' | 'statistics' | 'symbols'
+
+export interface FormulaTemplate {
+  id: string
+  group: FormulaTemplateGroup
+  label: string
+  latex: string
+  description?: string
+}
+
+export type FormulaEditorHistoryEntry = HistoryEntry<{ latex: string }>
 
 export interface FormulaEntry {
   id: string

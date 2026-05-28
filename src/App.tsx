@@ -6,6 +6,7 @@ import type { DistributionId, ToolId } from './types'
 
 const DistributionTool = lazy(() => import('./components/DistributionTool').then((module) => ({ default: module.DistributionTool })))
 const CalculatorTool = lazy(() => import('./components/CalculatorTool').then((module) => ({ default: module.CalculatorTool })))
+const FormulaEditorTool = lazy(() => import('./components/FormulaEditorTool').then((module) => ({ default: module.FormulaEditorTool })))
 const FormulaLibraryTool = lazy(() => import('./components/FormulaLibraryTool').then((module) => ({ default: module.FormulaLibraryTool })))
 const DataTool = lazy(() => import('./components/DataTool').then((module) => ({ default: module.DataTool })))
 const AboutTool = lazy(() => import('./components/AboutTool').then((module) => ({ default: module.AboutTool })))
@@ -17,6 +18,7 @@ function readHashTool(): ToolId {
 
 function renderTool(toolId: ToolId) {
   if (toolId === 'calculator') return <CalculatorTool />
+  if (toolId === 'formulaEditor') return <FormulaEditorTool />
   if (toolId === 'formulas') return <FormulaLibraryTool />
   if (toolId === 'data') return <DataTool />
   if (toolId === 'about') return <AboutTool />

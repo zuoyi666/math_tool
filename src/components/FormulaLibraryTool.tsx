@@ -104,6 +104,15 @@ export function FormulaLibraryTool() {
   return (
     <section className="tool-surface">
       <div className="toolbar-card">
+        <div className="formula-library-toolbar">
+          <div>
+            <h2>公式检索</h2>
+            <p>查找常用公式，或把公式带入编辑器继续排版。</p>
+          </div>
+          <a className="primary-button" href="#/formulaEditor">
+            打开公式编辑器
+          </a>
+        </div>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索公式、符号或说明" aria-label="搜索公式" />
         <div className="button-row">
           {categories.map((item) => (
@@ -139,6 +148,9 @@ export function FormulaLibraryTool() {
                   打开{getToolDefinition(item.relatedTool).label}
                 </a>
               ) : null}
+              <a className="ghost-button" href={`#/formulaEditor?latex=${encodeURIComponent(item.latex)}`}>
+                编辑公式
+              </a>
             </div>
           </article>
         ))}

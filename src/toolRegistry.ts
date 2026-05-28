@@ -5,6 +5,7 @@ import {
   Database,
   FunctionSquare,
   Info,
+  SquarePen,
   TableProperties,
 } from 'lucide-react'
 import type { ToolDefinition, ToolId } from './types'
@@ -18,6 +19,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   { id: 'binomial', label: '二项分布', description: 'Bin(n,p) 离散概率', icon: Calculator },
   { id: 'poisson', label: '泊松分布', description: 'Pois(λ) 离散概率', icon: Database },
   { id: 'calculator', label: '计算器', description: '表达式、变量与函数计算', icon: Calculator },
+  { id: 'formulaEditor', label: '公式编辑器', description: '可视化输入、预览和导出复杂公式', icon: SquarePen },
   { id: 'formulas', label: '公式库', description: '常用数学和统计公式', icon: BookOpenText },
   { id: 'data', label: '数据工具', description: 'CSV 描述统计与相关性', icon: TableProperties },
   { id: 'about', label: '关于', description: '项目与版本信息', icon: Info },

@@ -1370,7 +1370,19 @@ button:disabled {
   gap: 24px;
 }
 
+.formula-editor-tool {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+  gap: 24px;
+}
+
 .calculator-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.formula-editor-main {
   display: grid;
   gap: 16px;
   min-width: 0;
@@ -1389,6 +1401,27 @@ button:disabled {
 }
 
 .calculator-card-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.formula-editor-heading,
+.formula-library-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.formula-editor-heading h2,
+.formula-library-toolbar h2 {
+  margin: 0 0 6px;
+}
+
+.formula-editor-heading p,
+.formula-library-toolbar p {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
@@ -1429,6 +1462,56 @@ button:disabled {
   min-height: 146px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 16px;
+}
+
+.mathlive-field {
+  display: block;
+  width: 100%;
+  min-height: 112px;
+  overflow-x: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: #ffffff;
+  padding: 18px;
+  color: var(--text);
+  font-size: 28px;
+  line-height: 1.5;
+}
+
+.mathlive-field:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 136, 145, 0.14);
+}
+
+.formula-source-label {
+  display: inline-flex;
+  margin: 14px 0 8px;
+  color: var(--primary-strong);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.formula-source-input {
+  min-height: 132px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+}
+
+.formula-editor-status {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  color: var(--primary-strong);
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.formula-editor-status.error {
+  border-color: rgba(185, 28, 28, 0.28);
+  background: rgba(254, 242, 242, 0.8);
+  color: var(--danger);
 }
 
 .calculator-preview {
@@ -1544,6 +1627,10 @@ button:disabled {
   gap: 8px;
 }
 
+.formula-template-tabs {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .calculator-tabs button {
   min-height: 38px;
   border: 1px solid var(--border-strong);
@@ -1575,6 +1662,89 @@ button:disabled {
   border-color: var(--primary);
   color: var(--primary-strong);
   background: var(--primary-soft);
+}
+
+.formula-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.formula-template-button {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 11px;
+  color: #334155;
+  text-align: left;
+}
+
+.formula-template-button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.formula-template-button strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.formula-template-button code,
+.formula-current-code {
+  overflow-x: auto;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  padding: 7px 8px;
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.formula-template-button span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.formula-example-library {
+  margin-top: 0;
+}
+
+.formula-example-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.formula-example-grid button {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 11px;
+  color: #334155;
+  text-align: left;
+}
+
+.formula-example-grid button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.formula-example-grid strong {
+  color: var(--text);
+}
+
+.formula-example-grid span {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .memory-grid .symbol-button {
@@ -1682,6 +1852,45 @@ button:disabled {
 
 .history-list strong {
   color: var(--primary-strong);
+}
+
+.formula-export-preview {
+  min-height: 170px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #ffffff;
+  padding: 24px;
+}
+
+.formula-editor-preview-render {
+  display: block;
+  min-width: max-content;
+}
+
+.formula-editor-preview-render .katex-display {
+  margin: 0;
+  text-align: left;
+}
+
+.formula-editor-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.formula-current-code {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.formula-history-list p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .formula-grid {
@@ -1934,7 +2143,9 @@ g:focus .bar,
 
   .two-column-tool,
   .calculator-tool,
+  .formula-editor-tool,
   .calculator-main,
+  .formula-editor-main,
   .formula-grid,
   .formula-grid.compact,
   .stats-strip {
@@ -1946,23 +2157,28 @@ g:focus .bar,
   .workspace-card,
   .toolbar-card,
   .formula-card,
-  .calculator-side {
+  .calculator-side,
+  .formula-editor-side {
     width: 100%;
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
   }
 
-  .calculator-tool {
+  .calculator-tool,
+  .formula-editor-tool {
     grid-template-columns: 1fr;
     gap: 16px;
   }
 
-  .calculator-card-heading {
+  .calculator-card-heading,
+  .formula-editor-heading,
+  .formula-library-toolbar {
     flex-direction: column;
   }
 
-  .calculator-tabs {
+  .calculator-tabs,
+  .formula-template-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -2063,13 +2279,15 @@ g:focus .bar,
 
   .two-column-tool,
   .calculator-tool,
+  .formula-editor-tool,
   .stats-strip,
   .distribution-stat-grid {
     grid-template-columns: 1fr;
   }
 
   .calculator-tabs,
-  .symbol-grid {
+  .symbol-grid,
+  .formula-template-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
