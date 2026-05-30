@@ -1693,7 +1693,6 @@ button:disabled {
   font-size: 14px;
 }
 
-.formula-template-button code,
 .formula-current-code {
   overflow-x: auto;
   border-radius: 6px;
@@ -1705,7 +1704,33 @@ button:disabled {
   line-height: 1.45;
 }
 
-.formula-template-button span {
+.formula-template-render-wrap {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  padding: 8px 10px;
+}
+
+.formula-template-render {
+  min-width: max-content;
+  color: var(--text);
+}
+
+.formula-template-render .katex-display {
+  margin: 0;
+  text-align: left;
+}
+
+.formula-template-render .katex {
+  font-size: 1.08em;
+}
+
+.formula-template-description {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;

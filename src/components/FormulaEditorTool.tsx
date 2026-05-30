@@ -173,10 +173,19 @@ export function FormulaEditorTool() {
 
           <div className="formula-template-grid">
             {templates.map((template) => (
-              <button key={template.id} type="button" className="formula-template-button" onClick={() => insertLatex(template.latex)}>
+              <button
+                key={template.id}
+                type="button"
+                className="formula-template-button"
+                onClick={() => insertLatex(template.latex)}
+                aria-label={`插入${template.label}公式`}
+                title={template.latex}
+              >
                 <strong>{template.label}</strong>
-                <code>{template.latex}</code>
-                {template.description ? <span>{template.description}</span> : null}
+                <div className="formula-template-render-wrap">
+                  <MathFormula latex={template.latex} className="formula-template-render" />
+                </div>
+                {template.description ? <span className="formula-template-description">{template.description}</span> : null}
               </button>
             ))}
           </div>
