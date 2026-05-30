@@ -49,6 +49,13 @@ describe('calculator engine', () => {
     expect(evaluateCalculatorExpression({ expression: 'log(100, 10)', scope: {}, angleMode: 'rad', ans: 0 }).numericValue).toBe(2)
   })
 
+  it('accepts calculator-style symbols and common scientific aliases', () => {
+    expect(evaluateCalculatorExpression({ expression: 'π × 2', scope: {}, angleMode: 'rad', ans: 0 }).numericValue).toBeCloseTo(Math.PI * 2, 12)
+    expect(evaluateCalculatorExpression({ expression: '√(9) + 5²', scope: {}, angleMode: 'rad', ans: 0 }).numericValue).toBe(28)
+    expect(evaluateCalculatorExpression({ expression: 'log10(100) + ln(e)', scope: {}, angleMode: 'rad', ans: 0 }).numericValue).toBeCloseTo(3, 12)
+    expect(evaluateCalculatorExpression({ expression: 'sec(60) + cot(45)', scope: {}, angleMode: 'deg', ans: 0 }).numericValue).toBeCloseTo(3, 12)
+  })
+
   it('returns errors without a committed scope', () => {
     const result = evaluateCalculatorExpression({ expression: 'sqrt(', scope: { x: 2 }, angleMode: 'rad', ans: 4, commit: true })
 

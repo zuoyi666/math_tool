@@ -9,12 +9,21 @@ const RESERVED_SCOPE_KEYS = new Set([
   'e',
   'tau',
   'phi',
+  'ln',
+  'log10',
   'sin',
   'cos',
   'tan',
   'asin',
   'acos',
   'atan',
+  'sec',
+  'csc',
+  'cot',
+  'sinh',
+  'cosh',
+  'tanh',
+  'rand',
 ])
 
 function toRadians(value: number, angleMode: AngleMode) {
@@ -33,13 +42,32 @@ function buildEvaluationScope(scope: CalculatorScope, angleMode: AngleMode, ans:
     e: Math.E,
     tau: Math.PI * 2,
     phi: (1 + Math.sqrt(5)) / 2,
+    ln: (value: number) => Math.log(value),
+    log10: (value: number) => Math.log10(value),
     sin: (value: number) => Math.sin(toRadians(value, angleMode)),
     cos: (value: number) => Math.cos(toRadians(value, angleMode)),
     tan: (value: number) => Math.tan(toRadians(value, angleMode)),
     asin: (value: number) => fromRadians(Math.asin(value), angleMode),
     acos: (value: number) => fromRadians(Math.acos(value), angleMode),
     atan: (value: number) => fromRadians(Math.atan(value), angleMode),
+    sec: (value: number) => 1 / Math.cos(toRadians(value, angleMode)),
+    csc: (value: number) => 1 / Math.sin(toRadians(value, angleMode)),
+    cot: (value: number) => 1 / Math.tan(toRadians(value, angleMode)),
+    sinh: (value: number) => Math.sinh(value),
+    cosh: (value: number) => Math.cosh(value),
+    tanh: (value: number) => Math.tanh(value),
+    rand: () => Math.random(),
   }
+}
+
+export function normalizeCalculatorExpression(expression: string) {
+  return expression
+    .replace(/π/g, 'pi')
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/−/g, '-')
+    .replace(/√\s*\(/g, 'sqrt(')
+    .replace(/²/g, '^2')
 }
 
 function extractUserScope(workingScope: CalculatorScope): CalculatorScope {
@@ -87,7 +115,7 @@ export function evaluateCalculatorExpression({
   ans,
   commit = false,
 }: EvaluateCalculatorOptions): CalculatorEvaluation {
-  const trimmed = expression.trim()
+  const trimmed = normalizeCalculatorExpression(expression.trim())
   if (!trimmed) {
     return { ok: false, displayValue: '', error: '请输入表达式' }
   }
