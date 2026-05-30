@@ -15,6 +15,8 @@ export type ToolId =
   | 'data'
   | 'about'
 
+export type ToolGroupId = 'input' | 'distributions' | 'learning' | 'project'
+
 export type DistributionId = Extract<ToolId, 'normal' | 'normalGeneral' | 'studentT' | 'chiSquare' | 'f' | 'binomial' | 'poisson'>
 export type DistributionKind = 'continuous' | 'discrete'
 export type QueryMode = 'left' | 'right' | 'between' | 'twoTail' | 'criticalLeft' | 'criticalRight' | 'exact'
@@ -24,7 +26,14 @@ export interface ToolDefinition {
   id: ToolId
   label: string
   description: string
+  group: ToolGroupId
   icon: ComponentType<LucideProps>
+}
+
+export interface ToolGroupDefinition {
+  id: ToolGroupId
+  label: string
+  description: string
 }
 
 export interface ParameterDefinition {

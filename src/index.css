@@ -95,15 +95,35 @@ button:disabled {
 
 .tool-nav {
   display: grid;
-  gap: 7px;
-}
-
-.tool-nav {
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
   scrollbar-width: none;
 }
 
 .tool-nav::-webkit-scrollbar {
   display: none;
+}
+
+.tool-nav-group {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.tool-nav-group-title {
+  padding: 0 14px;
+  color: var(--subtle);
+  font-size: 12px;
+  font-weight: 780;
+  letter-spacing: 0;
+}
+
+.tool-nav-group-items {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
 }
 
 .tool-nav button,
@@ -249,6 +269,39 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
+}
+
+.topbar-nav-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.topbar-nav-group {
+  display: grid;
+  gap: 10px;
+}
+
+.topbar-nav-group-header {
+  display: grid;
+  gap: 3px;
+  border-left: 3px solid var(--primary);
+  padding-left: 10px;
+}
+
+.topbar-nav-group-header h3,
+.topbar-nav-group-header p {
+  margin: 0;
+}
+
+.topbar-nav-group-header h3 {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.topbar-nav-group-header p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .topbar-panel-grid a {
@@ -2335,11 +2388,29 @@ g:focus .bar,
 
   .tool-nav {
     display: flex;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 14px;
     max-width: 100%;
     overflow-x: auto;
     padding-bottom: 2px;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .tool-nav-group {
+    flex: 0 0 auto;
+    gap: 5px;
+    min-width: max-content;
+  }
+
+  .tool-nav-group-title {
+    padding: 0 2px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .tool-nav-group-items {
+    display: flex;
+    gap: 8px;
   }
 
   .tool-nav a,
@@ -2573,6 +2644,10 @@ g:focus .bar,
   .tool-nav a span,
   .tool-nav button span {
     display: none;
+  }
+
+  .tool-nav-group-title {
+    color: #64748b;
   }
 
   .two-column-tool,

@@ -2,7 +2,7 @@ import { CircleHelp, ExternalLink, Keyboard, Menu, Settings, Sigma } from 'lucid
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { GITHUB_REPO_LABEL, GITHUB_REPO_URL } from '../projectLinks'
-import { DEFAULT_TOOL_ID, TOOL_REGISTRY } from '../toolRegistry'
+import { DEFAULT_TOOL_ID, getToolsByGroup, TOOL_GROUPS } from '../toolRegistry'
 import type { ToolDefinition, ToolId } from '../types'
 
 interface AppShellProps {
@@ -42,15 +42,22 @@ export function AppShell({ activeTool, tool, children }: AppShellProps) {
         </a>
 
         <nav className="tool-nav">
-          {TOOL_REGISTRY.map((item) => {
-            const Icon = item.icon
-            return (
-              <a key={item.id} className={item.id === activeTool ? 'active' : ''} href={`#/${item.id}`} title={item.description}>
-                <Icon size={20} aria-hidden="true" />
-                <span>{item.label}</span>
-              </a>
-            )
-          })}
+          {TOOL_GROUPS.map((group) => (
+            <section key={group.id} className="tool-nav-group" aria-label={group.label}>
+              <div className="tool-nav-group-title">{group.label}</div>
+              <div className="tool-nav-group-items">
+                {getToolsByGroup(group.id).map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <a key={item.id} className={item.id === activeTool ? 'active' : ''} href={`#/${item.id}`} title={item.description}>
+                      <Icon size={20} aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </a>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
         </nav>
 
         <a className="repo-control" href={GITHUB_REPO_URL} aria-label="打开 GitHub 仓库">
@@ -89,12 +96,22 @@ export function AppShell({ activeTool, tool, children }: AppShellProps) {
               </button>
             </div>
             {activePanel === 'nav' ? (
-              <div className="topbar-panel-grid">
-                {TOOL_REGISTRY.map((item) => (
-                  <a key={item.id} className={item.id === activeTool ? 'active' : ''} href={`#/${item.id}`} onClick={() => setActivePanel(null)}>
-                    <strong>{item.label}</strong>
-                    <span>{item.description}</span>
-                  </a>
+              <div className="topbar-nav-groups">
+                {TOOL_GROUPS.map((group) => (
+                  <section key={group.id} className="topbar-nav-group" aria-label={group.label}>
+                    <div className="topbar-nav-group-header">
+                      <h3>{group.label}</h3>
+                      <p>{group.description}</p>
+                    </div>
+                    <div className="topbar-panel-grid">
+                      {getToolsByGroup(group.id).map((item) => (
+                        <a key={item.id} className={item.id === activeTool ? 'active' : ''} href={`#/${item.id}`} onClick={() => setActivePanel(null)}>
+                          <strong>{item.label}</strong>
+                          <span>{item.description}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             ) : null}
