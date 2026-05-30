@@ -4,7 +4,24 @@ import katex from 'katex'
 import 'mathlive'
 import 'mathlive/static.css'
 import type { MathfieldElement } from 'mathlive'
-import { Copy, Download, ImageDown, RotateCcw, Save } from 'lucide-react'
+import { Clock, Copy, Download, ImageDown, RotateCcw, Save, Search, Star } from 'lucide-react'
+import {
+  FORMULA_CATALOG,
+  FORMULA_EXAMPLE_IDS,
+  FORMULA_GROUPS,
+  getFormulaCatalogEntries,
+  getFormulaGroupLabel,
+  getFormulaTopics,
+  searchFormulaCatalog,
+} from '../formulaCatalog'
+import {
+  readFormulaFavorites,
+  readFormulaRecents,
+  recordRecentFormula,
+  toggleFormulaFavorite,
+  writeFormulaFavorites,
+  writeFormulaRecents,
+} from '../formulaCatalogState'
 import { copyTextToClipboard, downloadFormulaPng, downloadFormulaSvg } from '../formulaExport'
 import {
   compactFormulaLabel,
@@ -13,8 +30,8 @@ import {
   upsertFormulaHistory,
   writeFormulaHistory,
 } from '../formulaEditorState'
-import { DEFAULT_FORMULA_LATEX, FORMULA_EXAMPLES, FORMULA_TEMPLATE_GROUPS, FORMULA_TEMPLATES } from '../formulaTemplates'
-import type { FormulaEditorHistoryEntry, FormulaTemplateGroup } from '../types'
+import { DEFAULT_FORMULA_LATEX } from '../formulaTemplates'
+import type { FormulaCatalogEntry, FormulaEditorHistoryEntry, FormulaFavoriteEntry, FormulaRecentEntry, FormulaTemplateGroup } from '../types'
 import { MathFormula } from './MathFormula'
 
 type StatusState = {
@@ -22,8 +39,14 @@ type StatusState = {
   message: string
 }
 
+const FORMULA_RESULT_LIMIT = 48
+
 function nowLabel() {
   return new Date().toLocaleString('zh-CN', { hour12: false })
+}
+
+function nowIso() {
+  return new Date().toISOString()
 }
 
 function previewError(latex: string) {
@@ -45,15 +68,48 @@ function readInitialLatex() {
   return latexFromFormulaEditorHash(window.location.hash)
 }
 
+function readInitialFavorites() {
+  if (typeof window === 'undefined') return []
+  return readFormulaFavorites(window.localStorage)
+}
+
+function readInitialRecents() {
+  if (typeof window === 'undefined') return []
+  return readFormulaRecents(window.localStorage)
+}
+
+function getEntryPreviewLabel(entry: FormulaCatalogEntry) {
+  return `${entry.label} · ${getFormulaGroupLabel(entry.group)} / ${entry.topic}`
+}
+
 export function FormulaEditorTool() {
   const mathfieldRef = useRef<MathfieldElement | null>(null)
   const previewRef = useRef<HTMLDivElement | null>(null)
   const [latex, setLatex] = useState(readInitialLatex)
-  const [activeGroup, setActiveGroup] = useState<FormulaTemplateGroup>('calculus')
+  const [activeGroup, setActiveGroup] = useState<FormulaTemplateGroup | 'all'>('all')
+  const [activeTopic, setActiveTopic] = useState('全部')
+  const [catalogQuery, setCatalogQuery] = useState('')
+  const [favorites, setFavorites] = useState<FormulaFavoriteEntry[]>(readInitialFavorites)
+  const [recents, setRecents] = useState<FormulaRecentEntry[]>(readInitialRecents)
   const [history, setHistory] = useState<FormulaEditorHistoryEntry[]>(readInitialHistory)
   const [status, setStatus] = useState<StatusState>({ tone: 'idle', message: '选择模板或直接输入 LaTeX。' })
 
-  const templates = useMemo(() => FORMULA_TEMPLATES.filter((template) => template.group === activeGroup), [activeGroup])
+  const favoriteIds = useMemo(() => favorites.map((item) => item.id), [favorites])
+  const recentIds = useMemo(() => recents.map((item) => item.id), [recents])
+  const topics = useMemo(() => ['全部', ...getFormulaTopics(FORMULA_CATALOG, activeGroup)], [activeGroup])
+  const filteredCatalog = useMemo(
+    () =>
+      searchFormulaCatalog(FORMULA_CATALOG, catalogQuery, {
+        group: activeGroup,
+        topic: activeTopic,
+      }),
+    [activeGroup, activeTopic, catalogQuery],
+  )
+  const visibleCatalog = useMemo(() => filteredCatalog.slice(0, FORMULA_RESULT_LIMIT), [filteredCatalog])
+  const featuredEntries = useMemo(() => FORMULA_CATALOG.filter((entry) => entry.featured).slice(0, 12), [])
+  const favoriteEntries = useMemo(() => getFormulaCatalogEntries(favoriteIds).slice(0, 12), [favoriteIds])
+  const recentEntries = useMemo(() => getFormulaCatalogEntries(recentIds).slice(0, 12), [recentIds])
+  const exampleEntries = useMemo(() => getFormulaCatalogEntries([...FORMULA_EXAMPLE_IDS]), [])
   const error = useMemo(() => previewError(latex), [latex])
 
   useEffect(() => {
@@ -94,6 +150,21 @@ export function FormulaEditorTool() {
     setLatex(mathfield.getValue('latex'))
   }
 
+  const insertEntry = (entry: FormulaCatalogEntry) => {
+    insertLatex(entry.latex)
+    const next = recordRecentFormula(recents, entry.id, nowIso())
+    setRecents(next)
+    if (typeof window !== 'undefined') writeFormulaRecents(window.localStorage, next)
+    setStatus({ tone: 'success', message: `已插入：${entry.label}` })
+  }
+
+  const toggleFavorite = (entry: FormulaCatalogEntry) => {
+    const next = toggleFormulaFavorite(favorites, entry.id, nowIso())
+    setFavorites(next)
+    if (typeof window !== 'undefined') writeFormulaFavorites(window.localStorage, next)
+    setStatus({ tone: 'success', message: next.some((item) => item.id === entry.id) ? `已收藏：${entry.label}` : `已取消收藏：${entry.label}` })
+  }
+
   const copyLatex = async () => {
     if (await copyTextToClipboard(latex)) {
       syncHistory()
@@ -111,6 +182,39 @@ export function FormulaEditorTool() {
     } else {
       setStatus({ tone: 'error', message: result.error ?? '导出失败。' })
     }
+  }
+
+  const renderCatalogEntry = (entry: FormulaCatalogEntry, compact = false) => {
+    const isFavorite = favoriteIds.includes(entry.id)
+
+    return (
+      <article key={entry.id} className={compact ? 'formula-catalog-card compact' : 'formula-catalog-card'}>
+        <div className="formula-catalog-card-head">
+          <div>
+            <strong>{entry.label}</strong>
+            <span>
+              {getFormulaGroupLabel(entry.group)} / {entry.topic}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={isFavorite ? 'formula-favorite-button active' : 'formula-favorite-button'}
+            onClick={() => toggleFavorite(entry)}
+            aria-label={isFavorite ? `取消收藏${entry.label}` : `收藏${entry.label}`}
+            aria-pressed={isFavorite}
+          >
+            <Star size={15} fill={isFavorite ? 'currentColor' : 'none'} />
+          </button>
+        </div>
+        <button type="button" className="formula-catalog-insert" onClick={() => insertEntry(entry)} title={entry.latex}>
+          <span className="sr-only">插入{getEntryPreviewLabel(entry)}</span>
+          <div className="formula-template-render-wrap">
+            <MathFormula latex={entry.latex} className="formula-template-render" />
+          </div>
+          {!compact ? <span className="formula-template-description">{entry.description}</span> : null}
+        </button>
+      </article>
+    )
   }
 
   return (
@@ -156,51 +260,127 @@ export function FormulaEditorTool() {
         </section>
 
         <section className="workspace-card formula-template-card">
-          <div className="calculator-tabs formula-template-tabs" role="tablist" aria-label="公式模板分类">
-            {FORMULA_TEMPLATE_GROUPS.map((group) => (
+          <div className="formula-catalog-heading">
+            <div>
+              <h2>公式与符号库</h2>
+              <p>搜索或按领域筛选，点击公式即可插入到当前光标位置。</p>
+            </div>
+            <span>{FORMULA_CATALOG.length} 个条目</span>
+          </div>
+
+          <label className="formula-catalog-search" htmlFor="formula-catalog-search">
+            <Search size={16} />
+            <input
+              id="formula-catalog-search"
+              value={catalogQuery}
+              onChange={(event) => setCatalogQuery(event.target.value)}
+              placeholder="搜索：偏导、matrix、sigma、\\int、置信区间..."
+              aria-label="搜索公式和符号"
+            />
+          </label>
+
+          <div className="calculator-tabs formula-template-tabs formula-group-tabs" role="tablist" aria-label="公式领域分类">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeGroup === 'all'}
+              className={activeGroup === 'all' ? 'active' : ''}
+              onClick={() => {
+                setActiveGroup('all')
+                setActiveTopic('全部')
+              }}
+            >
+              全部
+            </button>
+            {FORMULA_GROUPS.map((group) => (
               <button
                 key={group.id}
                 type="button"
                 role="tab"
                 aria-selected={activeGroup === group.id}
                 className={activeGroup === group.id ? 'active' : ''}
-                onClick={() => setActiveGroup(group.id)}
+                onClick={() => {
+                  setActiveGroup(group.id)
+                  setActiveTopic('全部')
+                }}
               >
                 {group.label}
               </button>
             ))}
           </div>
 
-          <div className="formula-template-grid">
-            {templates.map((template) => (
+          <div className="formula-topic-row" aria-label="公式主题筛选">
+            {topics.map((topic) => (
               <button
-                key={template.id}
+                key={topic}
                 type="button"
-                className="formula-template-button"
-                onClick={() => insertLatex(template.latex)}
-                aria-label={`插入${template.label}公式`}
-                title={template.latex}
+                className={activeTopic === topic ? 'active' : ''}
+                onClick={() => setActiveTopic(topic)}
+                aria-pressed={activeTopic === topic}
               >
-                <strong>{template.label}</strong>
-                <div className="formula-template-render-wrap">
-                  <MathFormula latex={template.latex} className="formula-template-render" />
-                </div>
-                {template.description ? <span className="formula-template-description">{template.description}</span> : null}
+                {topic}
               </button>
             ))}
           </div>
+
+          <div className="formula-quick-panel">
+            <section>
+              <h3>常用</h3>
+              <div className="formula-compact-grid">{featuredEntries.map((entry) => renderCatalogEntry(entry, true))}</div>
+            </section>
+            <section>
+              <h3>
+                <Clock size={15} />
+                最近使用
+              </h3>
+              {recentEntries.length ? (
+                <div className="formula-compact-grid">{recentEntries.map((entry) => renderCatalogEntry(entry, true))}</div>
+              ) : (
+                <p>点击任意公式后会自动记录。</p>
+              )}
+            </section>
+            <section>
+              <h3>
+                <Star size={15} />
+                收藏
+              </h3>
+              {favoriteEntries.length ? (
+                <div className="formula-compact-grid">{favoriteEntries.map((entry) => renderCatalogEntry(entry, true))}</div>
+              ) : (
+                <p>点击星标可收藏高频公式。</p>
+              )}
+            </section>
+          </div>
+
+          <div className="formula-catalog-result-heading">
+            <h3>筛选结果</h3>
+            <span>
+              {visibleCatalog.length}/{filteredCatalog.length} 项
+            </span>
+          </div>
+          {filteredCatalog.length > visibleCatalog.length ? (
+            <p className="formula-result-note">结果较多，已先显示前 {FORMULA_RESULT_LIMIT} 项；继续输入关键词或选择主题可缩小范围。</p>
+          ) : null}
+          {visibleCatalog.length ? (
+            <div className="formula-template-grid">{visibleCatalog.map((entry) => renderCatalogEntry(entry))}</div>
+          ) : (
+            <div className="empty-state">没有找到匹配公式。可以尝试搜索英文名、符号名或 LaTeX 命令。</div>
+          )}
         </section>
 
         <section className="workspace-card learning-example-panel formula-example-library">
           <h2>复杂公式示例</h2>
           <p>这些示例覆盖偏导定义、半衰期、分离变量积分、梯度、向量点积和方差公式。</p>
           <div className="formula-example-grid">
-            {FORMULA_EXAMPLES.map((example) => (
+            {exampleEntries.map((example) => (
               <button
                 key={example.id}
                 type="button"
                 onClick={() => {
                   setLatex(example.latex)
+                  const next = recordRecentFormula(recents, example.id, nowIso())
+                  setRecents(next)
+                  if (typeof window !== 'undefined') writeFormulaRecents(window.localStorage, next)
                   setStatus({ tone: 'success', message: `已载入：${example.label}` })
                 }}
               >

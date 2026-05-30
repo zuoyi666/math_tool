@@ -1388,6 +1388,15 @@ button:disabled {
   min-width: 0;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .calculator-card-heading {
   display: flex;
   align-items: flex-start;
@@ -1631,6 +1640,10 @@ button:disabled {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.formula-group-tabs {
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+}
+
 .calculator-tabs button {
   min-height: 38px;
   border: 1px solid var(--border-strong);
@@ -1669,6 +1682,213 @@ button:disabled {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
   margin-top: 14px;
+}
+
+.formula-catalog-heading,
+.formula-catalog-result-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.formula-catalog-heading h2,
+.formula-catalog-result-heading h3 {
+  margin: 0 0 6px;
+}
+
+.formula-catalog-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.formula-catalog-heading span,
+.formula-catalog-result-heading span {
+  flex: 0 0 auto;
+  color: var(--primary-strong);
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.formula-result-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.formula-catalog-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0 12px;
+  color: var(--muted);
+}
+
+.formula-catalog-search input {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 11px 0;
+}
+
+.formula-topic-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+}
+
+.formula-topic-row button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 0 13px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.formula-topic-row button:hover,
+.formula-topic-row button.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.formula-quick-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.formula-quick-panel section {
+  min-width: 0;
+}
+
+.formula-quick-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.formula-quick-panel p {
+  margin: 0;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  padding: 11px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.formula-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(156px, 1fr));
+  gap: 9px;
+}
+
+.formula-catalog-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.formula-catalog-card:hover {
+  border-color: var(--primary);
+}
+
+.formula-catalog-card.compact {
+  padding: 8px;
+}
+
+.formula-catalog-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.formula-catalog-card-head div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.formula-catalog-card-head strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.formula-catalog-card-head span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.formula-favorite-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--muted);
+}
+
+.formula-favorite-button:hover,
+.formula-favorite-button.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.formula-catalog-insert {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #334155;
+  text-align: left;
+}
+
+.formula-catalog-insert:hover .formula-template-render-wrap {
+  background: #eefafa;
+}
+
+.empty-state {
+  margin-top: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  padding: 18px;
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .formula-template-button {

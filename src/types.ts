@@ -184,7 +184,53 @@ export interface CalculatorState {
 
 export type CalculatorHistoryEntry = HistoryEntry<{ expression: string; angleMode?: AngleMode }>
 
-export type FormulaTemplateGroup = 'basic' | 'calculus' | 'linearAlgebra' | 'statistics' | 'symbols'
+export type FormulaTemplateGroup =
+  | 'basic'
+  | 'symbols'
+  | 'elementary'
+  | 'calculus'
+  | 'multivariable'
+  | 'linearAlgebra'
+  | 'probability'
+  | 'statistics'
+  | 'discrete'
+  | 'differentialEquations'
+  | 'optimization'
+  | 'numerical'
+
+export type FormulaCatalogType = 'template' | 'symbol' | 'formula'
+export type FormulaDifficulty = 'basic' | 'intermediate' | 'advanced'
+
+export interface FormulaCatalogEntry {
+  id: string
+  type: FormulaCatalogType
+  group: FormulaTemplateGroup
+  topic: string
+  label: string
+  latex: string
+  description: string
+  keywords: string[]
+  aliases?: string[]
+  difficulty?: FormulaDifficulty
+  featured?: boolean
+  library?: boolean
+  relatedTool?: ToolId
+  example?: {
+    question: string
+    solution: string
+    latex?: string
+  }
+}
+
+export interface FormulaFavoriteEntry {
+  id: string
+  savedAt: string
+}
+
+export interface FormulaRecentEntry {
+  id: string
+  usedAt: string
+}
 
 export interface FormulaTemplate {
   id: string
