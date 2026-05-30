@@ -165,6 +165,14 @@ export function FormulaEditorTool() {
     setStatus({ tone: 'success', message: next.some((item) => item.id === entry.id) ? `已收藏：${entry.label}` : `已取消收藏：${entry.label}` })
   }
 
+  const loadExample = (entry: FormulaCatalogEntry) => {
+    setLatex(entry.latex)
+    const next = recordRecentFormula(recents, entry.id, nowIso())
+    setRecents(next)
+    if (typeof window !== 'undefined') writeFormulaRecents(window.localStorage, next)
+    setStatus({ tone: 'success', message: `已载入：${entry.label}` })
+  }
+
   const copyLatex = async () => {
     if (await copyTextToClipboard(latex)) {
       syncHistory()
@@ -323,72 +331,65 @@ export function FormulaEditorTool() {
             ))}
           </div>
 
-          <div className="formula-quick-panel">
-            <section>
-              <h3>常用</h3>
-              <div className="formula-compact-grid">{featuredEntries.map((entry) => renderCatalogEntry(entry, true))}</div>
-            </section>
-            <section>
-              <h3>
-                <Clock size={15} />
-                最近使用
-              </h3>
-              {recentEntries.length ? (
-                <div className="formula-compact-grid">{recentEntries.map((entry) => renderCatalogEntry(entry, true))}</div>
+          <div className="formula-catalog-body">
+            <section className="formula-catalog-results" aria-label="公式筛选结果">
+              <div className="formula-catalog-result-heading">
+                <h3>筛选结果</h3>
+                <span>
+                  {visibleCatalog.length}/{filteredCatalog.length} 项
+                </span>
+              </div>
+              {filteredCatalog.length > visibleCatalog.length ? (
+                <p className="formula-result-note">结果较多，已先显示前 {FORMULA_RESULT_LIMIT} 项；继续输入关键词或选择主题可缩小范围。</p>
+              ) : null}
+              {visibleCatalog.length ? (
+                <div className="formula-template-grid">{visibleCatalog.map((entry) => renderCatalogEntry(entry))}</div>
               ) : (
-                <p>点击任意公式后会自动记录。</p>
+                <div className="empty-state">没有找到匹配公式。可以尝试搜索英文名、符号名或 LaTeX 命令。</div>
               )}
             </section>
-            <section>
-              <h3>
-                <Star size={15} />
-                收藏
-              </h3>
-              {favoriteEntries.length ? (
-                <div className="formula-compact-grid">{favoriteEntries.map((entry) => renderCatalogEntry(entry, true))}</div>
-              ) : (
-                <p>点击星标可收藏高频公式。</p>
-              )}
-            </section>
-          </div>
 
-          <div className="formula-catalog-result-heading">
-            <h3>筛选结果</h3>
-            <span>
-              {visibleCatalog.length}/{filteredCatalog.length} 项
-            </span>
-          </div>
-          {filteredCatalog.length > visibleCatalog.length ? (
-            <p className="formula-result-note">结果较多，已先显示前 {FORMULA_RESULT_LIMIT} 项；继续输入关键词或选择主题可缩小范围。</p>
-          ) : null}
-          {visibleCatalog.length ? (
-            <div className="formula-template-grid">{visibleCatalog.map((entry) => renderCatalogEntry(entry))}</div>
-          ) : (
-            <div className="empty-state">没有找到匹配公式。可以尝试搜索英文名、符号名或 LaTeX 命令。</div>
-          )}
-        </section>
-
-        <section className="workspace-card learning-example-panel formula-example-library">
-          <h2>复杂公式示例</h2>
-          <p>这些示例覆盖偏导定义、半衰期、分离变量积分、梯度、向量点积和方差公式。</p>
-          <div className="formula-example-grid">
-            {exampleEntries.map((example) => (
-              <button
-                key={example.id}
-                type="button"
-                onClick={() => {
-                  setLatex(example.latex)
-                  const next = recordRecentFormula(recents, example.id, nowIso())
-                  setRecents(next)
-                  if (typeof window !== 'undefined') writeFormulaRecents(window.localStorage, next)
-                  setStatus({ tone: 'success', message: `已载入：${example.label}` })
-                }}
-              >
-                <strong>{example.label}</strong>
-                <MathFormula latex={example.latex} className="formula-example-render" />
-                <span>{example.description}</span>
-              </button>
-            ))}
+            <aside className="formula-assist-column" aria-label="公式辅助入口">
+              <section className="formula-assist-panel">
+                <h3>常用</h3>
+                <div className="formula-compact-grid">{featuredEntries.map((entry) => renderCatalogEntry(entry, true))}</div>
+              </section>
+              <section className="formula-assist-panel">
+                <h3>
+                  <Clock size={15} />
+                  最近使用
+                </h3>
+                {recentEntries.length ? (
+                  <div className="formula-compact-grid">{recentEntries.map((entry) => renderCatalogEntry(entry, true))}</div>
+                ) : (
+                  <p>点击任意公式后会自动记录。</p>
+                )}
+              </section>
+              <section className="formula-assist-panel">
+                <h3>
+                  <Star size={15} />
+                  收藏
+                </h3>
+                {favoriteEntries.length ? (
+                  <div className="formula-compact-grid">{favoriteEntries.map((entry) => renderCatalogEntry(entry, true))}</div>
+                ) : (
+                  <p>点击星标可收藏高频公式。</p>
+                )}
+              </section>
+              <section className="formula-assist-panel formula-example-library compact">
+                <h3>复杂公式示例</h3>
+                <p>点击后会替换当前公式，适合直接改写完整结构。</p>
+                <div className="formula-example-grid compact">
+                  {exampleEntries.map((example) => (
+                    <button key={example.id} type="button" onClick={() => loadExample(example)}>
+                      <strong>{example.label}</strong>
+                      <MathFormula latex={example.latex} className="formula-example-render" />
+                      <span>{example.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </aside>
           </div>
         </section>
       </div>
