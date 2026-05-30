@@ -7,8 +7,10 @@ describe('data analysis', () => {
 
     expect(summary.rowCount).toBe(3)
     expect(summary.columnCount).toBe(3)
+    expect(summary.columnProfiles[0]).toMatchObject({ name: 'name', type: 'text', nonEmpty: 3, uniqueCount: 3 })
     expect(summary.numericColumns).toHaveLength(2)
     expect(summary.numericColumns[0].mean).toBeCloseTo(2)
+    expect(summary.numericColumns[0].histogram.reduce((sum, bin) => sum + bin.count, 0)).toBe(3)
     expect(summary.correlations[0].value).toBeCloseTo(1)
   })
 
@@ -17,6 +19,22 @@ describe('data analysis', () => {
 
     expect(summary.numericColumns[0].count).toBe(2)
     expect(summary.numericColumns[0].missing).toBe(0)
+  })
+
+  it('profiles mixed columns, top values and sample rows', () => {
+    const summary = analyzeCsv('group,value\nA,1\nA,2\nB,n/a\n,4')
+
+    expect(summary.columnProfiles).toHaveLength(2)
+    expect(summary.columnProfiles[0]).toMatchObject({
+      name: 'group',
+      type: 'text',
+      nonEmpty: 3,
+      missing: 1,
+      uniqueCount: 2,
+    })
+    expect(summary.columnProfiles[0].topValues[0]).toEqual({ value: 'A', count: 2 })
+    expect(summary.columnProfiles[1]).toMatchObject({ name: 'value', type: 'mixed' })
+    expect(summary.sampleRows).toHaveLength(4)
   })
 
   it('suggests poisson modeling for non-negative integer counts', () => {

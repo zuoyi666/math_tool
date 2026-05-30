@@ -7,6 +7,26 @@ function fmt(value: number) {
   return Number.isFinite(value) ? value.toLocaleString('zh-CN', { maximumFractionDigits: 4 }) : '无效'
 }
 
+function fmtCompact(value: number) {
+  return Number.isFinite(value) ? value.toLocaleString('zh-CN', { maximumFractionDigits: 3 }) : ''
+}
+
+const TYPE_LABELS = {
+  numeric: '数值',
+  mixed: '混合',
+  text: '文本',
+  empty: '空列',
+} as const
+
+function correlationLabel(value: number) {
+  const abs = Math.abs(value)
+  if (!Number.isFinite(value)) return '样本不足'
+  if (abs >= 0.8) return '强相关'
+  if (abs >= 0.5) return '中等相关'
+  if (abs >= 0.3) return '弱相关'
+  return '相关性很弱'
+}
+
 export function DataTool() {
   const [csvText, setCsvText] = useState(SAMPLE_CSV)
   const summary = useMemo(() => analyzeCsv(csvText), [csvText])
@@ -51,6 +71,51 @@ export function DataTool() {
         </div>
       </div>
 
+      <section className="workspace-card data-profile-panel">
+        <div className="learning-panel-heading">
+          <div>
+            <h2>数据画像</h2>
+            <p>先检查每列类型、缺失值、唯一值和高频取值，再决定是否进入分布建模或相关性分析。</p>
+          </div>
+        </div>
+        <div className="data-profile-grid">
+          {summary.columnProfiles.map((profile) => (
+            <article key={profile.name} className={`data-profile-card ${profile.type}`}>
+              <div className="data-profile-card-head">
+                <span>{TYPE_LABELS[profile.type]}</span>
+                <strong>{profile.name}</strong>
+              </div>
+              <dl>
+                <div>
+                  <dt>非空</dt>
+                  <dd>{profile.nonEmpty}</dd>
+                </div>
+                <div>
+                  <dt>缺失</dt>
+                  <dd>{profile.missing}</dd>
+                </div>
+                <div>
+                  <dt>唯一值</dt>
+                  <dd>{profile.uniqueCount}</dd>
+                </div>
+              </dl>
+              <div className="top-value-list" aria-label={`${profile.name} 高频值`}>
+                {profile.topValues.length ? (
+                  profile.topValues.map((item) => (
+                    <span key={item.value}>
+                      {item.value}
+                      <b>{item.count}</b>
+                    </span>
+                  ))
+                ) : (
+                  <em>暂无非空值</em>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {summary.distributionSuggestions.length ? (
         <section className="workspace-card suggestion-panel">
           <div className="learning-panel-heading">
@@ -74,6 +139,46 @@ export function DataTool() {
         </section>
       ) : null}
 
+      {summary.numericColumns.length ? (
+        <section className="workspace-card data-profile-panel">
+          <div className="learning-panel-heading">
+            <div>
+              <h2>数值列直方图</h2>
+              <p>用轻量柱状图观察分布形状、集中区间和异常值数量。</p>
+            </div>
+          </div>
+          <div className="data-histogram-grid">
+            {summary.numericColumns.map((column) => {
+              const maxCount = Math.max(1, ...column.histogram.map((bin) => bin.count))
+              return (
+                <article key={column.name} className="data-histogram-card">
+                  <div className="data-histogram-head">
+                    <div>
+                      <h3>{column.name}</h3>
+                      <span>
+                        IQR {fmt(column.iqr)} · 异常值 {column.outlierCount}
+                      </span>
+                    </div>
+                    <strong>n={column.count}</strong>
+                  </div>
+                  <div className="data-histogram-bars" aria-label={`${column.name} 直方图`}>
+                    {column.histogram.map((bin) => (
+                      <div key={`${bin.from}-${bin.to}`} className="data-histogram-bin">
+                        <span style={{ height: `${Math.max(8, (bin.count / maxCount) * 100)}%` }} title={`${fmtCompact(bin.from)} - ${fmtCompact(bin.to)}: ${bin.count}`} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="data-histogram-axis">
+                    <span>{fmtCompact(column.min)}</span>
+                    <span>{fmtCompact(column.max)}</span>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+      ) : null}
+
       <div className="history-table-wrap">
         <table className="history-table">
           <thead>
@@ -81,6 +186,7 @@ export function DataTool() {
               <th>列</th>
               <th>有效值</th>
               <th>缺失</th>
+              <th>唯一值</th>
               <th>均值</th>
               <th>中位数</th>
               <th>标准差</th>
@@ -96,6 +202,7 @@ export function DataTool() {
                 <td>{column.name}</td>
                 <td>{column.count}</td>
                 <td>{column.missing}</td>
+                <td>{column.uniqueCount}</td>
                 <td>{fmt(column.mean)}</td>
                 <td>{fmt(column.median)}</td>
                 <td>{fmt(column.stdDev)}</td>
@@ -117,9 +224,41 @@ export function DataTool() {
               {item.left} / {item.right}
             </h2>
             <strong>{fmt(item.value)}</strong>
+            <p>{correlationLabel(item.value)}</p>
           </article>
         ))}
       </div>
+
+      {summary.sampleRows.length ? (
+        <section className="workspace-card data-preview-panel">
+          <div className="learning-panel-heading">
+            <div>
+              <h2>前 5 行预览</h2>
+              <p>快速确认导入的数据是否分列正确。</p>
+            </div>
+          </div>
+          <div className="history-table-wrap data-preview-wrap">
+            <table className="history-table">
+              <thead>
+                <tr>
+                  {Object.keys(summary.sampleRows[0]).map((field) => (
+                    <th key={field}>{field}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {summary.sampleRows.map((row, index) => (
+                  <tr key={`${index}-${Object.values(row).join('-')}`}>
+                    {Object.entries(row).map(([field, value]) => (
+                      <td key={field}>{value || '空'}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </section>
   )
 }

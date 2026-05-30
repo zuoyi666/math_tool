@@ -2563,6 +2563,183 @@ button:disabled {
   margin: 0 0 12px;
 }
 
+.data-profile-panel,
+.data-preview-panel {
+  margin-bottom: 16px;
+}
+
+.data-profile-grid,
+.data-histogram-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.data-profile-card,
+.data-histogram-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.data-profile-card.mixed {
+  border-color: rgba(249, 115, 22, 0.32);
+  background: #fffaf4;
+}
+
+.data-profile-card.empty {
+  border-style: dashed;
+}
+
+.data-profile-card-head {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.data-profile-card-head span {
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.data-profile-card-head strong {
+  color: var(--text);
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.data-profile-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.data-profile-card dl div {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  padding: 8px;
+}
+
+.data-profile-card dt,
+.data-profile-card dd {
+  margin: 0;
+}
+
+.data-profile-card dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.data-profile-card dd {
+  margin-top: 2px;
+  color: var(--primary-strong);
+  font-weight: 800;
+}
+
+.top-value-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.top-value-list span,
+.top-value-list em {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  padding: 5px 8px;
+  color: #334155;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 650;
+}
+
+.top-value-list b {
+  color: var(--accent);
+}
+
+.data-histogram-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.data-histogram-head h3 {
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.data-histogram-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.data-histogram-head strong {
+  flex: 0 0 auto;
+  color: var(--primary-strong);
+  font-size: 13px;
+}
+
+.data-histogram-bars {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  align-items: end;
+  gap: 5px;
+  height: 112px;
+  border-bottom: 1px solid var(--border-strong);
+  padding-top: 8px;
+}
+
+.data-histogram-bin {
+  display: flex;
+  align-items: end;
+  height: 100%;
+  min-width: 0;
+}
+
+.data-histogram-bin span {
+  display: block;
+  width: 100%;
+  min-height: 8px;
+  border-radius: 5px 5px 0 0;
+  background: #8dd3d8;
+}
+
+.data-histogram-bin span:hover {
+  background: var(--accent);
+}
+
+.data-histogram-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.data-preview-wrap {
+  margin-top: 12px;
+}
+
+.formula-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .about-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

@@ -269,6 +269,7 @@ export interface NumericColumnSummary {
   name: string
   count: number
   missing: number
+  uniqueCount: number
   mean: number
   median: number
   variance: number
@@ -276,15 +277,35 @@ export interface NumericColumnSummary {
   min: number
   q1: number
   q3: number
+  iqr: number
   max: number
+  outlierCount: number
+  histogram: HistogramBin[]
+}
+
+export interface HistogramBin {
+  from: number
+  to: number
+  count: number
+}
+
+export interface ColumnProfile {
+  name: string
+  type: 'numeric' | 'mixed' | 'text' | 'empty'
+  nonEmpty: number
+  missing: number
+  uniqueCount: number
+  topValues: Array<{ value: string; count: number }>
 }
 
 export interface DatasetSummary {
   rowCount: number
   columnCount: number
+  columnProfiles: ColumnProfile[]
   numericColumns: NumericColumnSummary[]
   correlations: Array<{ left: string; right: string; value: number }>
   distributionSuggestions: DistributionSuggestion[]
+  sampleRows: Array<Record<string, string>>
 }
 
 export interface DistributionSuggestion {

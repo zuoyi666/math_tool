@@ -1,5 +1,5 @@
 import Papa from 'papaparse'
-import type { DatasetSummary, DistributionSuggestion, NumericColumnSummary } from './types'
+import type { ColumnProfile, DatasetSummary, DistributionSuggestion, HistogramBin, NumericColumnSummary } from './types'
 
 function quantile(sorted: number[], q: number) {
   if (sorted.length === 0) return Number.NaN
@@ -9,24 +9,85 @@ function quantile(sorted: number[], q: number) {
   return sorted[base + 1] === undefined ? sorted[base] : sorted[base] + rest * (sorted[base + 1] - sorted[base])
 }
 
+function buildHistogram(values: number[], binCount = 8): HistogramBin[] {
+  if (!values.length) return []
+  const sorted = [...values].sort((a, b) => a - b)
+  const min = sorted[0]
+  const max = sorted[sorted.length - 1]
+  const span = max - min
+
+  if (span === 0) {
+    return [{ from: min, to: max, count: values.length }]
+  }
+
+  const bins = Array.from({ length: binCount }, (_, index) => {
+    const from = min + (span * index) / binCount
+    const to = min + (span * (index + 1)) / binCount
+    return { from, to, count: 0 }
+  })
+
+  for (const value of values) {
+    const rawIndex = Math.floor(((value - min) / span) * binCount)
+    const index = Math.min(binCount - 1, Math.max(0, rawIndex))
+    bins[index].count += 1
+  }
+
+  return bins
+}
+
 function summarizeColumn(name: string, values: Array<number | null>): NumericColumnSummary | null {
   const numeric = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
   if (numeric.length === 0) return null
   const sorted = [...numeric].sort((a, b) => a - b)
   const mean = numeric.reduce((sum, value) => sum + value, 0) / numeric.length
   const variance = numeric.length > 1 ? numeric.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (numeric.length - 1) : 0
+  const q1 = quantile(sorted, 0.25)
+  const q3 = quantile(sorted, 0.75)
+  const iqr = q3 - q1
+  const lowerFence = q1 - 1.5 * iqr
+  const upperFence = q3 + 1.5 * iqr
   return {
     name,
     count: numeric.length,
     missing: values.length - numeric.length,
+    uniqueCount: new Set(numeric).size,
     mean,
     median: quantile(sorted, 0.5),
     variance,
     stdDev: Math.sqrt(variance),
     min: sorted[0],
-    q1: quantile(sorted, 0.25),
-    q3: quantile(sorted, 0.75),
+    q1,
+    q3,
+    iqr,
     max: sorted[sorted.length - 1],
+    outlierCount: iqr === 0 ? 0 : numeric.filter((value) => value < lowerFence || value > upperFence).length,
+    histogram: buildHistogram(numeric),
+  }
+}
+
+function buildColumnProfile(name: string, rawValues: string[]): ColumnProfile {
+  const normalized = rawValues.map((value) => String(value ?? '').trim())
+  const nonEmptyValues = normalized.filter(Boolean)
+  const numericCount = nonEmptyValues.filter((value) => Number.isFinite(Number(value))).length
+  const frequency = new Map<string, number>()
+
+  for (const value of nonEmptyValues) {
+    frequency.set(value, (frequency.get(value) ?? 0) + 1)
+  }
+
+  const type: ColumnProfile['type'] =
+    nonEmptyValues.length === 0 ? 'empty' : numericCount === nonEmptyValues.length ? 'numeric' : numericCount > 0 ? 'mixed' : 'text'
+
+  return {
+    name,
+    type,
+    nonEmpty: nonEmptyValues.length,
+    missing: rawValues.length - nonEmptyValues.length,
+    uniqueCount: frequency.size,
+    topValues: [...frequency.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 5)
+      .map(([value, count]) => ({ value, count })),
   }
 }
 
@@ -110,9 +171,12 @@ export function analyzeCsv(csvText: string): DatasetSummary {
   const fields = parsed.meta.fields ?? []
   const numericByColumn = new Map<string, number[]>()
   const finiteValuesByColumn = new Map<string, number[]>()
+  const columnProfiles: ColumnProfile[] = []
   const summaries: NumericColumnSummary[] = []
 
   for (const field of fields) {
+    const rawValues = rows.map((row) => String(row[field] ?? ''))
+    columnProfiles.push(buildColumnProfile(field, rawValues))
     const values = rows.map((row) => {
       const raw = String(row[field] ?? '').trim()
       if (!raw) return null
@@ -145,17 +209,14 @@ export function analyzeCsv(csvText: string): DatasetSummary {
   return {
     rowCount: rows.length,
     columnCount: fields.length,
+    columnProfiles,
     numericColumns: summaries,
     correlations,
     distributionSuggestions: buildDistributionSuggestions(summaries, finiteValuesByColumn),
+    sampleRows: rows.slice(0, 5).map((row) => Object.fromEntries(fields.map((field) => [field, String(row[field] ?? '')]))),
   }
 }
 
-export function histogramBins(summary: NumericColumnSummary, count = 8) {
-  const span = summary.max - summary.min || 1
-  return Array.from({ length: count }, (_, index) => {
-    const from = summary.min + (span * index) / count
-    const to = summary.min + (span * (index + 1)) / count
-    return { label: `${from.toFixed(1)}-${to.toFixed(1)}`, value: 0 }
-  })
+export function histogramBins(summary: NumericColumnSummary) {
+  return summary.histogram.map((bin) => ({ label: `${bin.from.toFixed(1)}-${bin.to.toFixed(1)}`, value: bin.count }))
 }
